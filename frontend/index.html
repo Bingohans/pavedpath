@@ -1,0 +1,1655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kubernetes Pod Deployment</title>
+    <script src="/env-config.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg-page: #f8fafc;
+            --bg-card: #ffffff;
+            --bg-input: #ffffff;
+            --text: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --border-focus: #3b82f6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --info: #06b6d4;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-page);
+            color: var(--text);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            margin-bottom: 2.5rem;
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            font-size: 1rem;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+
+        .deployment-form {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 2rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-section {
+            margin-bottom: 2rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .form-section:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .section-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text);
+            margin: 0;
+        }
+
+        .info-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--info);
+            color: white;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: help;
+            position: relative;
+        }
+
+        .tooltip {
+            position: absolute;
+            bottom: calc(100% + 8px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--text);
+            color: white;
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 400;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+            z-index: 100;
+            max-width: 300px;
+            white-space: normal;
+            line-height: 1.4;
+        }
+
+        .tooltip::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 6px solid transparent;
+            border-top-color: var(--text);
+        }
+
+        .info-icon:hover .tooltip {
+            opacity: 1;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.25rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .required {
+            color: var(--error);
+        }
+
+        input, select {
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.625rem 0.875rem;
+            color: var(--text);
+            font-size: 0.875rem;
+            font-family: inherit;
+            transition: all 0.2s;
+            outline: none;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--border-focus);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        input:hover:not(:focus), select:hover:not(:focus) {
+            border-color: #cbd5e1;
+        }
+
+        select {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%2364748b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.875rem center;
+            padding-right: 2.5rem;
+        }
+
+        .input-hint {
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+        }
+
+        .input-group {
+            display: flex;
+            gap: 0.5rem;
+            align-items: flex-end;
+        }
+
+        .input-group input {
+            flex: 1;
+        }
+
+        .input-suffix {
+            background: var(--bg-page);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.625rem 0.875rem;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            min-width: 60px;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .resource-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.25rem;
+            background: var(--bg-page);
+            padding: 1.25rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+        }
+
+        .resource-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .resource-label {
+            font-size: 0.8125rem;
+            font-weight: 500;
+            color: var(--text);
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            cursor: pointer;
+            padding: 0.875rem 1rem;
+            background: var(--bg-page);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .checkbox-group:hover {
+            border-color: var(--border-focus);
+            background: #f1f5f9;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: var(--primary);
+        }
+
+        .checkbox-label {
+            flex: 1;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+
+        .validation-message {
+            font-size: 0.8125rem;
+            color: var(--error);
+            display: none;
+            margin-top: 0.25rem;
+        }
+
+        .validation-message.show {
+            display: block;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 2rem;
+        }
+
+        button {
+            flex: 1;
+            padding: 0.75rem 1.5rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+        }
+
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-page);
+        }
+
+        .preview-section {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            display: none;
+        }
+
+        .preview-section.show {
+            display: block;
+        }
+
+        .preview-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .yaml-output {
+            background: #1e293b;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1.25rem;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.8125rem;
+            line-height: 1.6;
+            overflow-x: auto;
+            color: #e2e8f0;
+        }
+
+        .yaml-key {
+            color: #60a5fa;
+        }
+
+        .yaml-string {
+            color: #34d399;
+        }
+
+        .yaml-number {
+            color: #fbbf24;
+        }
+
+        .info-box {
+            background: #eff6ff;
+            border-left: 3px solid var(--info);
+            padding: 0.875rem 1rem;
+            border-radius: 4px;
+            margin-bottom: 1.25rem;
+            font-size: 0.875rem;
+            color: var(--text);
+        }
+
+        .info-box strong {
+            color: var(--info);
+            font-weight: 600;
+        }
+
+        .btn-link {
+            background: none;
+            border: none;
+            color: var(--primary);
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            padding: 0;
+            text-decoration: none;
+            transition: color 0.2s;
+            flex: 0 0 auto;
+        }
+
+        .btn-link:hover {
+            color: var(--primary-hover);
+            text-decoration: underline;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            padding: 0.875rem 1rem;
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 6px;
+            margin-bottom: 1.25rem;
+            color: var(--text);
+            font-size: 0.875rem;
+            line-height: 1.5;
+        }
+
+        .status-indicator svg {
+            color: var(--info);
+            margin-top: 0.1rem;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--bg-card);
+            border-radius: 8px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        .modal-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .modal-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text);
+            margin: 0;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .modal-close:hover {
+            background: var(--bg-page);
+            color: var(--text);
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .modal-footer {
+            padding: 1.5rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 0.75rem;
+            justify-content: flex-end;
+        }
+
+        .modal-footer button {
+            flex: 0 0 auto;
+            min-width: 100px;
+        }
+
+        .checkbox-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .checkbox-list label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 400;
+            cursor: pointer;
+        }
+
+        .checkbox-list input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: var(--primary);
+        }
+
+        .success-state {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .success-state.show {
+            display: block;
+        }
+
+        .success-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 1rem;
+            color: var(--success);
+        }
+
+        .success-state h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 0.5rem;
+        }
+
+        .success-state p {
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+        }
+
+        /* Welcome Modal */
+        .welcome-overlay {
+            display: flex;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .welcome-modal {
+            background: var(--bg-card);
+            border-radius: 12px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+        }
+
+        .welcome-header {
+            padding: 2rem 2rem 1rem 2rem;
+            text-align: center;
+        }
+
+        .welcome-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        .welcome-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--text);
+        }
+
+        .welcome-subtitle {
+            font-size: 1rem;
+            color: var(--text-muted);
+        }
+
+        .welcome-body {
+            padding: 1.5rem 2rem;
+        }
+
+        .welcome-text {
+            font-size: 0.9375rem;
+            line-height: 1.7;
+            color: var(--text);
+            margin-bottom: 1.5rem;
+        }
+
+        .welcome-highlight {
+            background: #eff6ff;
+            border-left: 3px solid var(--primary);
+            padding: 1rem 1.25rem;
+            border-radius: 6px;
+            margin-bottom: 1.5rem;
+        }
+
+        .welcome-highlight h4 {
+            font-size: 0.9375rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--primary);
+        }
+
+        .welcome-highlight ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .welcome-highlight li {
+            padding: 0.25rem 0;
+            font-size: 0.875rem;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .welcome-highlight li::before {
+            content: '✓';
+            color: var(--success);
+            font-weight: 700;
+        }
+
+        .welcome-footer {
+            padding: 1rem 2rem 2rem 2rem;
+            text-align: center;
+        }
+
+        .welcome-btn {
+            padding: 0.875rem 2rem;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .welcome-btn:hover {
+            background: var(--primary-hover);
+        }
+
+        @media (max-width: 768px) {
+            .resource-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Kubernetes Pod Deployment</h1>
+            <p class="subtitle">Deploy pods to your cluster with validated resource limits</p>
+        </header>
+
+        <form class="deployment-form" id="deploymentForm">
+            <!-- Basic Configuration -->
+            <div class="form-section">
+                <div class="section-header">
+                    <h2 class="section-title">Basic Configuration</h2>
+                    <div class="info-icon">
+                        ?
+                        <div class="tooltip">Configure the basic pod settings including name, namespace, and container image</div>
+                    </div>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>
+                            Pod Name <span class="required">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            id="podName" 
+                            name="podName" 
+                            placeholder="my-application"
+                            pattern="^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+                            required
+                        >
+                        <span class="input-hint">Lowercase alphanumeric and hyphens only</span>
+                        <span class="validation-message" id="podNameError">Invalid pod name format</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            Namespace <span class="required">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            id="namespace" 
+                            name="namespace" 
+                            placeholder="development"
+                            required
+                        >
+                        <span class="input-hint">Your assigned namespace</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            Docker Image <span class="required">*</span>
+                        </label>
+                        <select id="dockerImage" name="dockerImage" required>
+                            <option value="">Select an image...</option>
+                            <option value="nginx:1.25-alpine">nginx:1.25-alpine</option>
+                            <option value="node:20-alpine">node:20-alpine</option>
+                            <option value="python:3.11-slim">python:3.11-slim</option>
+                            <option value="golang:1.21-alpine">golang:1.21-alpine</option>
+                            <option value="openjdk:17-slim">openjdk:17-slim</option>
+                            <option value="redis:7-alpine">redis:7-alpine</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- IAM / Access Control -->
+                <div style="margin-top: 1.5rem;">
+                    <label style="margin-bottom: 0.75rem; display: block;">
+                        Access Control
+                    </label>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label style="font-weight: 400; font-size: 0.875rem;">
+                                <input type="checkbox" checked disabled style="margin-right: 0.5rem; width: auto;">
+                                You (Admin)
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label style="font-weight: 400; font-size: 0.875rem;">
+                                <input type="checkbox" id="accessMember1" style="margin-right: 0.5rem; width: auto;">
+                                John Doe (DevOps)
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label style="font-weight: 400; font-size: 0.875rem;">
+                                <input type="checkbox" id="accessMember2" style="margin-right: 0.5rem; width: auto;">
+                                Jane Smith (Developer)
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label style="font-weight: 400; font-size: 0.875rem;">
+                                <input type="checkbox" id="accessMember3" style="margin-right: 0.5rem; width: auto;">
+                                Mike Johnson (Developer)
+                            </label>
+                        </div>
+                    </div>
+                    <span class="input-hint" style="margin-top: 0.5rem; display: block;">Select team members who can access this pod</span>
+                </div>
+            </div>
+
+            <!-- Resource Configuration -->
+            <div class="form-section">
+                <div class="section-header">
+                    <h2 class="section-title">Resource Limits</h2>
+                    <div class="info-icon">
+                        ?
+                        <div class="tooltip">Set CPU and memory requests (guaranteed) and limits (maximum). Limits must be greater than or equal to requests.</div>
+                    </div>
+                    <div style="flex: 1;"></div>
+                    <button type="button" class="btn-link" id="requestHigherLimitsBtn">
+                        Need higher limits?
+                    </button>
+                </div>
+                
+                <div class="status-indicator">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink: 0;">
+                        <circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="2"/>
+                        <path d="M8 4V9M8 11V12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    <span><strong>Using Standard Limits</strong> - Default values are pre-filled below. You can adjust within maximum allowed limits.</span>
+                </div>
+
+                <div class="resource-grid">
+                    <div class="resource-item">
+                        <label class="resource-label">Memory Request</label>
+                        <div class="input-group">
+                            <input 
+                                type="number" 
+                                id="memoryRequest" 
+                                name="memoryRequest" 
+                                value="256"
+                                min="64"
+                                max="8192"
+                                step="64"
+                                required
+                            >
+                            <div class="input-suffix">MB</div>
+                        </div>
+                        <span class="validation-message" id="memoryRequestError">Must be 64-8192 MB</span>
+                    </div>
+
+                    <div class="resource-item">
+                        <label class="resource-label">Memory Limit</label>
+                        <div class="input-group">
+                            <input 
+                                type="number" 
+                                id="memoryLimit" 
+                                name="memoryLimit" 
+                                value="512"
+                                min="64"
+                                max="8192"
+                                step="64"
+                                required
+                            >
+                            <div class="input-suffix">MB</div>
+                        </div>
+                        <span class="validation-message" id="memoryLimitError">Must be 64-8192 MB and ≥ request</span>
+                    </div>
+
+                    <div class="resource-item">
+                        <label class="resource-label">CPU Request</label>
+                        <div class="input-group">
+                            <input 
+                                type="number" 
+                                id="cpuRequest" 
+                                name="cpuRequest" 
+                                value="100"
+                                min="10"
+                                max="4000"
+                                step="10"
+                                required
+                            >
+                            <div class="input-suffix">m</div>
+                        </div>
+                        <span class="validation-message" id="cpuRequestError">Must be 10-4000 millicores</span>
+                    </div>
+
+                    <div class="resource-item">
+                        <label class="resource-label">CPU Limit</label>
+                        <div class="input-group">
+                            <input 
+                                type="number" 
+                                id="cpuLimit" 
+                                name="cpuLimit" 
+                                value="500"
+                                min="10"
+                                max="4000"
+                                step="10"
+                                required
+                            >
+                            <div class="input-suffix">m</div>
+                        </div>
+                        <span class="validation-message" id="cpuLimitError">Must be 10-4000 millicores and ≥ request</span>
+                    </div>
+                </div>
+                
+                <div class="info-box" style="margin-top: 1.25rem;">
+                    <strong>ℹ️ Maximum Limits:</strong> 8 GB RAM, 4 CPU cores, and 50 GB storage per pod
+                </div>
+            </div>
+
+            <!-- Storage Configuration -->
+            <div class="form-section">
+                <div class="section-header">
+                    <h2 class="section-title">Storage Configuration</h2>
+                    <div class="info-icon">
+                        ?
+                        <div class="tooltip">Add persistent storage to your pod. Data will persist even if the pod restarts.</div>
+                    </div>
+                    <div style="flex: 1;"></div>
+                    <button type="button" class="btn-link" id="requestHigherStorageBtn">
+                        Need higher limits?
+                    </button>
+                </div>
+                
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="enableStorage" name="enableStorage">
+                        <label class="checkbox-label" for="enableStorage">
+                            Enable Persistent Storage
+                        </label>
+                    </div>
+                </div>
+
+                <div id="storageOptions" style="display: none;">
+                    <div class="form-grid" style="margin-top: 1rem;">
+                        <div class="form-group">
+                            <label>Storage Size</label>
+                            <div class="input-group">
+                                <input 
+                                    type="number" 
+                                    id="storageSize" 
+                                    name="storageSize" 
+                                    placeholder="10"
+                                    min="1"
+                                    max="50"
+                                    step="1"
+                                >
+                                <div class="input-suffix">GB</div>
+                            </div>
+                            <span class="validation-message" id="storageSizeError">Must be 1-50 GB</span>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Mount Path</label>
+                            <input 
+                                type="text" 
+                                id="mountPath" 
+                                name="mountPath" 
+                                placeholder="/data"
+                            >
+                            <span class="input-hint">Absolute path in container</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Database Configuration -->
+            <div class="form-section">
+                <div class="section-header">
+                    <h2 class="section-title">Database Configuration</h2>
+                    <div class="info-icon">
+                        ?
+                        <div class="tooltip">Configure database connection. Choose to create a new database (automatic setup) or connect to an existing one.</div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="enableDatabase" name="enableDatabase">
+                        <label class="checkbox-label" for="enableDatabase">
+                            Enable Database Connection
+                        </label>
+                    </div>
+                </div>
+
+                <div id="databaseOptions" style="display: none;">
+                    <div style="margin-top: 1.25rem;">
+                        <!-- Radio buttons for database setup type -->
+                        <div class="checkbox-list" style="margin-bottom: 1.25rem;">
+                            <label style="font-weight: 500;">
+                                <input type="radio" name="dbSetupType" id="dbSetupNew" value="new" checked>
+                                Create new database (Recommended)
+                            </label>
+                            <label style="font-weight: 500;">
+                                <input type="radio" name="dbSetupType" id="dbSetupExisting" value="existing">
+                                Use existing database
+                            </label>
+                        </div>
+
+                        <!-- New Database Form -->
+                        <div id="newDatabaseForm">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Database Type</label>
+                                    <select id="databaseTypeNew" name="databaseTypeNew">
+                                        <option value="">Select database...</option>
+                                        <option value="postgresql">PostgreSQL</option>
+                                        <option value="mysql">MySQL</option>
+                                        <option value="mongodb">MongoDB</option>
+                                        <option value="redis">Redis</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Database Name</label>
+                                    <input 
+                                        type="text" 
+                                        id="dbNameNew" 
+                                        name="dbNameNew" 
+                                        placeholder="myapp_db"
+                                    >
+                                    <span class="input-hint">Alphanumeric and underscores only</span>
+                                </div>
+                            </div>
+                            
+                            <div class="info-box" style="margin-top: 1rem;">
+                                <strong>ℹ️ Automatic Setup:</strong> We'll provision a new database instance and configure all connection details automatically. Credentials will be securely stored and injected as environment variables.
+                            </div>
+                        </div>
+
+                        <!-- Existing Database Form -->
+                        <div id="existingDatabaseForm" style="display: none;">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Database Type</label>
+                                    <select id="databaseType" name="databaseType">
+                                        <option value="">Select database...</option>
+                                        <option value="postgresql">PostgreSQL</option>
+                                        <option value="mysql">MySQL</option>
+                                        <option value="mongodb">MongoDB</option>
+                                        <option value="redis">Redis</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Database Host</label>
+                                    <input 
+                                        type="text" 
+                                        id="dbHost" 
+                                        name="dbHost" 
+                                        placeholder="postgres-service.default.svc.cluster.local"
+                                    >
+                                    <span class="input-hint">Service name or IP address</span>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Database Port</label>
+                                    <input 
+                                        type="number" 
+                                        id="dbPort" 
+                                        name="dbPort" 
+                                        placeholder="5432"
+                                        min="1"
+                                        max="65535"
+                                    >
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Database Name</label>
+                                    <input 
+                                        type="text" 
+                                        id="dbName" 
+                                        name="dbName" 
+                                        placeholder="myapp_db"
+                                    >
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Username (optional)</label>
+                                    <input 
+                                        type="text" 
+                                        id="dbUsername" 
+                                        name="dbUsername" 
+                                        placeholder="dbuser"
+                                    >
+                                    <span class="input-hint">Leave blank to use default</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="button-group">
+                <button type="button" class="btn-secondary" id="resetBtn">
+                    Reset Form
+                </button>
+                <button type="submit" class="btn-primary" id="submitBtn">
+                    Deploy to Cluster
+                </button>
+            </div>
+        </form>
+
+        <!-- Preview Section -->
+        <div class="preview-section" id="previewSection">
+            <h3 class="preview-title">Generated Kubernetes Manifest</h3>
+            <div class="yaml-output" id="yamlOutput"></div>
+        </div>
+    </div>
+
+    <!-- Higher Limits Request Modal -->
+    <div class="modal-overlay" id="higherLimitsModal">
+        <div class="modal">
+            <div id="requestForm">
+                <div class="modal-header">
+                    <h3 class="modal-title">Request Higher Resource Limits</h3>
+                    <button type="button" class="modal-close" id="closeModal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p style="color: var(--text-muted); margin-bottom: 1.5rem;">
+                        Select which resources you need to increase and provide justification for your request.
+                    </p>
+
+                    <div class="form-group" style="margin-bottom: 1.5rem;">
+                        <label style="margin-bottom: 0.75rem; display: block;">Resources to Increase</label>
+                        <div class="checkbox-list">
+                            <label>
+                                <input type="checkbox" id="requestMemory" name="requestMemory">
+                                Memory (RAM)
+                            </label>
+                            <label>
+                                <input type="checkbox" id="requestCPU" name="requestCPU">
+                                CPU
+                            </label>
+                            <label>
+                                <input type="checkbox" id="requestStorage" name="requestStorage">
+                                Storage
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="requestedValuesSection" style="display: none; margin-bottom: 1.5rem;">
+                        <label style="margin-bottom: 0.75rem; display: block; font-weight: 500;">Requested Values</label>
+                        
+                        <div id="memoryRequestSection" style="display: none; margin-bottom: 1rem;">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label style="font-size: 0.8125rem;">Memory Limit</label>
+                                    <div class="input-group">
+                                        <input type="number" id="requestedMemory" placeholder="16" min="8" max="128" step="1">
+                                        <div class="input-suffix">GB</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="cpuRequestSection" style="display: none; margin-bottom: 1rem;">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label style="font-size: 0.8125rem;">CPU Limit</label>
+                                    <div class="input-group">
+                                        <input type="number" id="requestedCPU" placeholder="8" min="4" max="32" step="1">
+                                        <div class="input-suffix">cores</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="storageRequestSection" style="display: none; margin-bottom: 1rem;">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label style="font-size: 0.8125rem;">Storage Size</label>
+                                    <div class="input-group">
+                                        <input type="number" id="requestedStorage" placeholder="100" min="50" max="1000" step="10">
+                                        <div class="input-suffix">GB</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Justification <span class="required">*</span></label>
+                        <textarea 
+                            id="requestJustification" 
+                            rows="4" 
+                            style="width: 100%; padding: 0.625rem 0.875rem; border: 1px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 0.875rem; resize: vertical;"
+                            placeholder="Explain why you need higher limits (e.g., large dataset processing, high-traffic application, complex computations...)"
+                            required
+                        ></textarea>
+                        <span class="input-hint">Provide detailed reasoning to help DevOps review your request</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" id="cancelRequest">Cancel</button>
+                    <button type="button" class="btn-primary" id="submitRequest">Submit Request</button>
+                </div>
+            </div>
+
+            <div id="successState" class="success-state">
+                <svg class="success-icon" viewBox="0 0 64 64" fill="none">
+                    <circle cx="32" cy="32" r="30" stroke="currentColor" stroke-width="4"/>
+                    <path d="M20 32L28 40L44 24" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <h3>Request Sent!</h3>
+                <p>Your request has been sent to DevOps for review.</p>
+                <p style="margin-bottom: 0;"><strong>Please deploy the pod with the highest available limits to continue working.</strong> We'll review your request and adjust resources if approved.</p>
+                <div style="margin-top: 1.5rem;">
+                    <button type="button" class="btn-primary" id="closeSuccessModal">Got it</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Welcome Modal -->
+    <div class="welcome-overlay" id="welcomeModal">
+        <div class="welcome-modal">
+            <div class="welcome-header">
+                <div class="welcome-icon">👋</div>
+                <h2 class="welcome-title">Welcome to Paved Roads Deployment</h2>
+                <p class="welcome-subtitle">Your streamlined path to Kubernetes</p>
+            </div>
+            <div class="welcome-body">
+                <p class="welcome-text">
+                    This is a <strong>demo environment</strong> designed to showcase the Paved Roads deployment workflow. 
+                    You can experience the full deployment process in a real Kubernetes cluster with some limitations.
+                </p>
+                
+                <div class="welcome-highlight">
+                    <h4>What Actually Gets Deployed:</h4>
+                    <ul>
+                        <li>Pod with your specified name</li>
+                        <li>Namespace assignment</li>
+                        <li>Container image of your choice</li>
+                        <li>Basic storage (if selected)</li>
+                        <li>Database connection setup (if selected)</li>
+                    </ul>
+                </div>
+
+                <div class="welcome-highlight" style="background: #fef3c7; border-color: var(--warning);">
+                    <h4 style="color: #92400e;">⚠️ Important Notes:</h4>
+                    <ul style="margin-top: 0.5rem;">
+                        <li style="color: var(--text);">Resource values are pre-set to minimum defaults</li>
+                        <li style="color: var(--text);">Deployments are automatically deleted after 5 minutes</li>
+                        <li style="color: var(--text);">GitHub repository and ArgoCD views are simulated</li>
+                        <li style="color: var(--text);">Only core pod configuration is actually deployed</li>
+                    </ul>
+                </div>
+
+                <p class="welcome-text" style="margin-bottom: 0;">
+                    Ready to see how easy Kubernetes deployment can be? Let's get started!
+                </p>
+            </div>
+            <div class="welcome-footer">
+                <button class="welcome-btn" id="closeWelcome">Get Started</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Show welcome modal on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('welcomeModal').style.display = 'flex';
+        });
+
+        document.getElementById('closeWelcome').addEventListener('click', function() {
+            document.getElementById('welcomeModal').style.display = 'none';
+        });
+
+        // Form elements
+        const form = document.getElementById('deploymentForm');
+        const enableStorage = document.getElementById('enableStorage');
+        const storageOptions = document.getElementById('storageOptions');
+        const enableDatabase = document.getElementById('enableDatabase');
+        const databaseOptions = document.getElementById('databaseOptions');
+        const previewSection = document.getElementById('previewSection');
+        const yamlOutput = document.getElementById('yamlOutput');
+        const resetBtn = document.getElementById('resetBtn');
+
+        // Database setup type elements
+        const dbSetupNew = document.getElementById('dbSetupNew');
+        const dbSetupExisting = document.getElementById('dbSetupExisting');
+        const newDatabaseForm = document.getElementById('newDatabaseForm');
+        const existingDatabaseForm = document.getElementById('existingDatabaseForm');
+
+        // Modal elements
+        const higherLimitsModal = document.getElementById('higherLimitsModal');
+        const requestHigherLimitsBtn = document.getElementById('requestHigherLimitsBtn');
+        const requestHigherStorageBtn = document.getElementById('requestHigherStorageBtn');
+        const closeModal = document.getElementById('closeModal');
+        const cancelRequest = document.getElementById('cancelRequest');
+        const submitRequest = document.getElementById('submitRequest');
+        const closeSuccessModal = document.getElementById('closeSuccessModal');
+        const requestForm = document.getElementById('requestForm');
+        const successState = document.getElementById('successState');
+
+        // Request checkboxes
+        const requestMemory = document.getElementById('requestMemory');
+        const requestCPU = document.getElementById('requestCPU');
+        const requestStorage = document.getElementById('requestStorage');
+        const requestedValuesSection = document.getElementById('requestedValuesSection');
+        const memoryRequestSection = document.getElementById('memoryRequestSection');
+        const cpuRequestSection = document.getElementById('cpuRequestSection');
+        const storageRequestSection = document.getElementById('storageRequestSection');
+
+        // Toggle storage options
+        enableStorage.addEventListener('change', function() {
+            storageOptions.style.display = this.checked ? 'block' : 'none';
+            if (this.checked) {
+                document.getElementById('storageSize').required = true;
+                document.getElementById('mountPath').required = true;
+            } else {
+                document.getElementById('storageSize').required = false;
+                document.getElementById('mountPath').required = false;
+            }
+        });
+
+        // Toggle database options
+        enableDatabase.addEventListener('change', function() {
+            databaseOptions.style.display = this.checked ? 'block' : 'none';
+        });
+
+        // Toggle between new and existing database forms
+        dbSetupNew.addEventListener('change', function() {
+            if (this.checked) {
+                newDatabaseForm.style.display = 'block';
+                existingDatabaseForm.style.display = 'none';
+            }
+        });
+
+        dbSetupExisting.addEventListener('change', function() {
+            if (this.checked) {
+                newDatabaseForm.style.display = 'none';
+                existingDatabaseForm.style.display = 'block';
+            }
+        });
+
+        // Modal functions
+        function openModal() {
+            higherLimitsModal.classList.add('show');
+            requestForm.style.display = 'block';
+            successState.classList.remove('show');
+        }
+
+        function closeModalFunc() {
+            higherLimitsModal.classList.remove('show');
+            // Reset form
+            document.getElementById('requestJustification').value = '';
+            requestMemory.checked = false;
+            requestCPU.checked = false;
+            requestStorage.checked = false;
+            updateRequestedValuesVisibility();
+        }
+
+        requestHigherLimitsBtn.addEventListener('click', openModal);
+        requestHigherStorageBtn.addEventListener('click', openModal);
+        closeModal.addEventListener('click', closeModalFunc);
+        cancelRequest.addEventListener('click', closeModalFunc);
+        closeSuccessModal.addEventListener('click', closeModalFunc);
+
+        // Close modal when clicking outside
+        higherLimitsModal.addEventListener('click', function(e) {
+            if (e.target === higherLimitsModal) {
+                closeModalFunc();
+            }
+        });
+
+        // Update requested values visibility
+        function updateRequestedValuesVisibility() {
+            const anyChecked = requestMemory.checked || requestCPU.checked || requestStorage.checked;
+            requestedValuesSection.style.display = anyChecked ? 'block' : 'none';
+            memoryRequestSection.style.display = requestMemory.checked ? 'block' : 'none';
+            cpuRequestSection.style.display = requestCPU.checked ? 'block' : 'none';
+            storageRequestSection.style.display = requestStorage.checked ? 'block' : 'none';
+        }
+
+        requestMemory.addEventListener('change', updateRequestedValuesVisibility);
+        requestCPU.addEventListener('change', updateRequestedValuesVisibility);
+        requestStorage.addEventListener('change', updateRequestedValuesVisibility);
+
+        // Submit request
+        submitRequest.addEventListener('click', function() {
+            const justification = document.getElementById('requestJustification').value.trim();
+            
+            if (!justification) {
+                alert('Please provide a justification for your request');
+                return;
+            }
+
+            if (!requestMemory.checked && !requestCPU.checked && !requestStorage.checked) {
+                alert('Please select at least one resource to increase');
+                return;
+            }
+
+            // Simulate sending request to DevOps
+            console.log('Request submitted:', {
+                memory: requestMemory.checked ? document.getElementById('requestedMemory').value : null,
+                cpu: requestCPU.checked ? document.getElementById('requestedCPU').value : null,
+                storage: requestStorage.checked ? document.getElementById('requestedStorage').value : null,
+                justification: justification
+            });
+
+            // Show success state
+            requestForm.style.display = 'none';
+            successState.classList.add('show');
+        });
+
+        // Validation functions
+        function validateMemory() {
+            const request = parseInt(document.getElementById('memoryRequest').value);
+            const limit = parseInt(document.getElementById('memoryLimit').value);
+            
+            let valid = true;
+            
+            if (request < 64 || request > 8192) {
+                showError('memoryRequestError');
+                valid = false;
+            } else {
+                hideError('memoryRequestError');
+            }
+            
+            if (limit < 64 || limit > 8192) {
+                showError('memoryLimitError');
+                valid = false;
+            } else if (limit < request) {
+                showError('memoryLimitError');
+                valid = false;
+            } else {
+                hideError('memoryLimitError');
+            }
+            
+            return valid;
+        }
+
+        function validateCPU() {
+            const request = parseInt(document.getElementById('cpuRequest').value);
+            const limit = parseInt(document.getElementById('cpuLimit').value);
+            
+            let valid = true;
+            
+            if (request < 10 || request > 4000) {
+                showError('cpuRequestError');
+                valid = false;
+            } else {
+                hideError('cpuRequestError');
+            }
+            
+            if (limit < 10 || limit > 4000) {
+                showError('cpuLimitError');
+                valid = false;
+            } else if (limit < request) {
+                showError('cpuLimitError');
+                valid = false;
+            } else {
+                hideError('cpuLimitError');
+            }
+            
+            return valid;
+        }
+
+        function validateStorage() {
+            if (!enableStorage.checked) return true;
+            
+            const size = parseInt(document.getElementById('storageSize').value);
+            
+            if (size < 1 || size > 50) {
+                showError('storageSizeError');
+                return false;
+            } else {
+                hideError('storageSizeError');
+                return true;
+            }
+        }
+
+        function validatePodName() {
+            const podName = document.getElementById('podName').value;
+            const pattern = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/;
+            
+            if (!pattern.test(podName)) {
+                showError('podNameError');
+                return false;
+            } else {
+                hideError('podNameError');
+                return true;
+            }
+        }
+
+        function showError(elementId) {
+            const element = document.getElementById(elementId);
+            element.classList.add('show');
+        }
+
+        function hideError(elementId) {
+            const element = document.getElementById(elementId);
+            element.classList.remove('show');
+        }
+
+        // Generate YAML manifest
+        function generateManifest(formData) {
+            const data = Object.fromEntries(formData);
+            const isNewDb = document.getElementById('dbSetupNew').checked;
+            
+            let yaml = `apiVersion: v1
+kind: Pod
+metadata:
+  name: ${data.podName}
+  namespace: ${data.namespace}
+  labels:
+    app: ${data.podName}
+    environment: development
+  annotations:
+    access-control: "admin"`;
+
+            // Add team member annotations if selected
+            const teamMembers = [];
+            if (document.getElementById('accessMember1').checked) teamMembers.push('john.doe');
+            if (document.getElementById('accessMember2').checked) teamMembers.push('jane.smith');
+            if (document.getElementById('accessMember3').checked) teamMembers.push('mike.johnson');
+            
+            if (teamMembers.length > 0) {
+                yaml += `
+    team-access: "${teamMembers.join(',')}"`;
+            }
+
+            yaml += `
+spec:
+  containers:
+  - name: ${data.podName}-container
+    image: ${data.dockerImage}
+    resources:
+      requests:
+        memory: "${data.memoryRequest}Mi"
+        cpu: "${data.cpuRequest}m"
+      limits:
+        memory: "${data.memoryLimit}Mi"
+        cpu: "${data.cpuLimit}m"`;
+
+            if (enableStorage.checked) {
+                yaml += `
+    volumeMounts:
+    - name: ${data.podName}-storage
+      mountPath: ${data.mountPath}`;
+            }
+
+            if (enableDatabase.checked) {
+                if (isNewDb) {
+                    yaml += `
+    env:
+    - name: DB_TYPE
+      value: "${data.databaseTypeNew || 'postgresql'}"
+    - name: DB_NAME
+      value: "${data.dbNameNew || data.podName + '_db'}"
+    - name: DB_HOST
+      valueFrom:
+        secretKeyRef:
+          name: ${data.podName}-db-secret
+          key: host
+    - name: DB_PORT
+      valueFrom:
+        secretKeyRef:
+          name: ${data.podName}-db-secret
+          key: port
+    - name: DB_USER
+      valueFrom:
+        secretKeyRef:
+          name: ${data.podName}-db-secret
+          key: username
+    - name: DB_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: ${data.podName}-db-secret
+          key: password`;
+                } else {
+                    yaml += `
+    env:
+    - name: DB_TYPE
+      value: "${data.databaseType}"
+    - name: DB_HOST
+      value: "${data.dbHost}"
+    - name: DB_PORT
+      value: "${data.dbPort || '5432'}"
+    - name: DB_NAME
+      value: "${data.dbName}"`;
+                    
+                    if (data.dbUsername) {
+                        yaml += `
+    - name: DB_USER
+      value: "${data.dbUsername}"`;
+                    }
+                }
+            }
+
+            if (enableStorage.checked) {
+                yaml += `
+  volumes:
+  - name: ${data.podName}-storage
+    persistentVolumeClaim:
+      claimName: ${data.podName}-pvc`;
+            }
+
+            return yaml;
+        }
+
+        // Syntax highlighting for YAML
+        function highlightYAML(yaml) {
+            return yaml
+                .replace(/^(\s*)([a-zA-Z_-]+):/gm, '$1<span class="yaml-key">$2</span>:')
+                .replace(/: "([^"]*)"/g, ': <span class="yaml-string">"$1"</span>')
+                .replace(/: ([0-9]+)/g, ': <span class="yaml-number">$1</span>');
+        }
+
+        // Form submission
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Validate all fields
+            const isPodNameValid = validatePodName();
+            const isMemoryValid = validateMemory();
+            const isCPUValid = validateCPU();
+            const isStorageValid = validateStorage();
+            
+            if (!isPodNameValid || !isMemoryValid || !isCPUValid || !isStorageValid) {
+                return;
+            }
+            
+            // Get form data
+            const formData = new FormData(form);
+            const podName = formData.get('podName');
+            const namespace = formData.get('namespace');
+            const dockerImage = formData.get('dockerImage');
+            const hasStorage = enableStorage.checked;
+            const hasDatabase = enableDatabase.checked;
+            
+            // Redirect to deployment progress page with data
+            const params = new URLSearchParams({
+                podName: podName,
+                namespace: namespace,
+                dockerImage: dockerImage,
+                hasStorage: hasStorage,
+                hasDatabase: hasDatabase
+            });
+            
+            window.location.href = `deployment-progress.html?${params.toString()}`;
+        });
+
+        // Reset form
+        resetBtn.addEventListener('click', function() {
+            form.reset();
+            previewSection.classList.remove('show');
+            storageOptions.style.display = 'none';
+            databaseOptions.style.display = 'none';
+            newDatabaseForm.style.display = 'block';
+            existingDatabaseForm.style.display = 'none';
+            
+            // Hide all errors
+            document.querySelectorAll('.validation-message').forEach(el => {
+                el.classList.remove('show');
+            });
+        });
+
+        // Real-time validation
+        document.getElementById('memoryRequest').addEventListener('input', validateMemory);
+        document.getElementById('memoryLimit').addEventListener('input', validateMemory);
+        document.getElementById('cpuRequest').addEventListener('input', validateCPU);
+        document.getElementById('cpuLimit').addEventListener('input', validateCPU);
+        document.getElementById('storageSize').addEventListener('input', validateStorage);
+        document.getElementById('podName').addEventListener('input', validatePodName);
+    </script>
+</body>
+</html>

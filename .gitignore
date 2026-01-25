@@ -1,0 +1,108 @@
+# Environment variables - NEVER commit these!
+.env
+.env.local
+.env.*.local
+*.env
+backend/.env
+frontend/.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+venv/
+ENV/
+env/
+.venv
+
+# Kubernetes secrets and configs
+*-secret.yaml
+*secret*.yaml
+kubeconfig
+*.kubeconfig
+.kube/
+
+# Certificates and keys - CRITICAL!
+*.pem
+*.key
+*.crt
+*.csr
+*.p12
+*.pfx
+*.jks
+ssl/
+certs/
+*.cert
+
+# Tokens and credentials
+token
+*.token
+credentials
+*.credentials
+auth.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Docker
+.dockerignore
+
+# Terraform (if you use it later)
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+
+# Sensitive data files
+secrets/
+private/
+confidential/
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Temporary files
+*.tmp
+tmp/
+temp/
+
+# Node modules (if you add frontend build tools)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

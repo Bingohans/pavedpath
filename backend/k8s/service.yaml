@@ -1,0 +1,88 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: paved-roads-api
+  namespace: paved-roads
+  labels:
+    app: paved-roads-api
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 8000
+    protocol: TCP
+    name: http
+  selector:
+    app: paved-roads-api
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: paved-roads-api
+  namespace: paved-roads
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: paved-roads-deployer
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "secrets", "persistentvolumeclaims"]
+  verbs: ["get", "list", "create", "delete", "watch"]
+- apiGroups: [""]
+  resources: ["namespaces"]
+  verbs: ["get", "list", "create"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: paved-roads-deployer-binding
+subjects:
+- kind: ServiceAccount
+  name: paved-roads-api
+  namespace: paved-roads
+roleRef:
+  kind: ClusterRole
+  name: paved-roads-deployer
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: paved-roads-api-secrets
+  namespace: paved-roads
+type: Opaque
+stringData:
+  jwt-secret: "change-this-to-a-secure-random-value-in-production"
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: paved-roads-api
+  namespace: paved-roads
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - api.yourdomain.com
+    secretName: paved-roads-api-tls
+  rules:
+  - host: api.yourdomain.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: paved-roads-api
+            port:
+              number: 80

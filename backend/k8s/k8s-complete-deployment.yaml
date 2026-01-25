@@ -1,0 +1,172 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: paved-roads
+  labels:
+    name: paved-roads
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-config
+  namespace: paved-roads
+data:
+  env-config.js: |
+    window.ENV = {
+      API_BASE_URL: "https://pv-api.bingoniels.space",
+      ENVIRONMENT: "production"
+    };
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: paved-roads-frontend
+  namespace: paved-roads
+  labels:
+    app: paved-roads-frontend
+    version: v1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: paved-roads-frontend
+  template:
+    metadata:
+      labels:
+        app: paved-roads-frontend
+        version: v1
+    spec:
+      containers:
+      - name: frontend
+        image: ghcr.io/bingoniels/pavedpath/paved-roads-frontend:latest
+        imagePullPolicy: Always
+        
+        ports:
+        - containerPort: 80
+          name: http
+          protocol: TCP
+        
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+        
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 3
+          periodSeconds: 5
+
+        volumeMounts:
+        - name: config
+          mountPath: /usr/share/nginx/html/env-config.js
+          subPath: env-config.js
+          readOnly: true
+      volumes:
+      - name: config
+        configMap:
+          name: frontend-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: paved-roads-frontend
+  namespace: paved-roads
+  labels:
+    app: paved-roads-frontend
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+    name: http
+  selector:
+    app: paved-roads-frontend
+
+---
+# Ingress for Frontend
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: paved-roads-frontend-ingress
+  namespace: paved-roads
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - pavedpath.bingoniels.space
+    secretName: frontend-tls
+  rules:
+  - host: pavedpath.bingoniels.space
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: paved-roads-frontend
+            port:
+              number: 80
+  - host: pavedpath.bingoniels.space
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: paved-roads-frontend
+            port:
+              number: 80
+
+---
+# Ingress for Backend API
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: paved-roads-api-ingress
+  namespace: paved-roads
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    # CORS configuration
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://pavedpath.bingoniels.space"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, DELETE, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "Authorization,Content-Type"
+    nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - pv-api.bingoniels.space
+    secretName: api-tls
+  rules:
+  - host: pv-api.bingoniels.space
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: paved-roads-api
+            port:
+              number: 80
