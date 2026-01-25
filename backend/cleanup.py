@@ -78,7 +78,6 @@ class CleanupScheduler:
                     "cleanup_argocd": cleanup_argocd
                 }
                 logger.info(f"Scheduled cleanup for {key} at {cleanup_time}")
-        )
     
     def cancel_cleanup(self, pod_name: str, namespace: str):
         """
