@@ -1241,415 +1241,248 @@
             </div>
         </div>
     </div>
-
     <script>
-        // Show welcome modal on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('welcomeModal').style.display = 'flex';
-        });
+    // Show welcome modal on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('welcomeModal').style.display = 'flex';
+    });
 
-        document.getElementById('closeWelcome').addEventListener('click', function() {
-            document.getElementById('welcomeModal').style.display = 'none';
-        });
+    document.getElementById('closeWelcome').addEventListener('click', function() {
+        document.getElementById('welcomeModal').style.display = 'none';
+    });
 
-        // Form elements
-        const form = document.getElementById('deploymentForm');
-        const enableStorage = document.getElementById('enableStorage');
-        const storageOptions = document.getElementById('storageOptions');
-        const enableDatabase = document.getElementById('enableDatabase');
-        const databaseOptions = document.getElementById('databaseOptions');
-        const previewSection = document.getElementById('previewSection');
-        const yamlOutput = document.getElementById('yamlOutput');
-        const resetBtn = document.getElementById('resetBtn');
+    // Form elements
+    const form = document.getElementById('deploymentForm');
+    const enableStorage = document.getElementById('enableStorage');
+    const storageOptions = document.getElementById('storageOptions');
+    const enableDatabase = document.getElementById('enableDatabase');
+    const databaseOptions = document.getElementById('databaseOptions');
+    const resetBtn = document.getElementById('resetBtn');
 
-        // Database setup type elements
-        const dbSetupNew = document.getElementById('dbSetupNew');
-        const dbSetupExisting = document.getElementById('dbSetupExisting');
-        const newDatabaseForm = document.getElementById('newDatabaseForm');
-        const existingDatabaseForm = document.getElementById('existingDatabaseForm');
+    // Database setup type elements
+    const dbSetupNew = document.getElementById('dbSetupNew');
+    const dbSetupExisting = document.getElementById('dbSetupExisting');
+    const newDatabaseForm = document.getElementById('newDatabaseForm');
+    const existingDatabaseForm = document.getElementById('existingDatabaseForm');
 
-        // Modal elements
-        const higherLimitsModal = document.getElementById('higherLimitsModal');
-        const requestHigherLimitsBtn = document.getElementById('requestHigherLimitsBtn');
-        const requestHigherStorageBtn = document.getElementById('requestHigherStorageBtn');
-        const closeModal = document.getElementById('closeModal');
-        const cancelRequest = document.getElementById('cancelRequest');
-        const submitRequest = document.getElementById('submitRequest');
-        const closeSuccessModal = document.getElementById('closeSuccessModal');
-        const requestForm = document.getElementById('requestForm');
-        const successState = document.getElementById('successState');
+    // Modal elements
+    const higherLimitsModal = document.getElementById('higherLimitsModal');
+    const requestHigherLimitsBtn = document.getElementById('requestHigherLimitsBtn');
+    const requestHigherStorageBtn = document.getElementById('requestHigherStorageBtn');
+    const closeModal = document.getElementById('closeModal');
+    const cancelRequest = document.getElementById('cancelRequest');
+    const submitRequest = document.getElementById('submitRequest');
+    const closeSuccessModal = document.getElementById('closeSuccessModal');
+    const requestForm = document.getElementById('requestForm');
+    const successState = document.getElementById('successState');
 
-        // Request checkboxes
-        const requestMemory = document.getElementById('requestMemory');
-        const requestCPU = document.getElementById('requestCPU');
-        const requestStorage = document.getElementById('requestStorage');
-        const requestedValuesSection = document.getElementById('requestedValuesSection');
-        const memoryRequestSection = document.getElementById('memoryRequestSection');
-        const cpuRequestSection = document.getElementById('cpuRequestSection');
-        const storageRequestSection = document.getElementById('storageRequestSection');
+    // Request checkboxes
+    const requestMemory = document.getElementById('requestMemory');
+    const requestCPU = document.getElementById('requestCPU');
+    const requestStorage = document.getElementById('requestStorage');
+    const requestedValuesSection = document.getElementById('requestedValuesSection');
+    const memoryRequestSection = document.getElementById('memoryRequestSection');
+    const cpuRequestSection = document.getElementById('cpuRequestSection');
+    const storageRequestSection = document.getElementById('storageRequestSection');
 
-        // Toggle storage options
-        enableStorage.addEventListener('change', function() {
-            storageOptions.style.display = this.checked ? 'block' : 'none';
-            if (this.checked) {
-                document.getElementById('storageSize').required = true;
-                document.getElementById('mountPath').required = true;
-            } else {
-                document.getElementById('storageSize').required = false;
-                document.getElementById('mountPath').required = false;
-            }
-        });
-
-        // Toggle database options
-        enableDatabase.addEventListener('change', function() {
-            databaseOptions.style.display = this.checked ? 'block' : 'none';
-        });
-
-        // Toggle between new and existing database forms
-        dbSetupNew.addEventListener('change', function() {
-            if (this.checked) {
-                newDatabaseForm.style.display = 'block';
-                existingDatabaseForm.style.display = 'none';
-            }
-        });
-
-        dbSetupExisting.addEventListener('change', function() {
-            if (this.checked) {
-                newDatabaseForm.style.display = 'none';
-                existingDatabaseForm.style.display = 'block';
-            }
-        });
-
-        // Modal functions
-        function openModal() {
-            higherLimitsModal.classList.add('show');
-            requestForm.style.display = 'block';
-            successState.classList.remove('show');
+    // Toggle storage options
+    enableStorage.addEventListener('change', function() {
+        storageOptions.style.display = this.checked ? 'block' : 'none';
+        if (this.checked) {
+            document.getElementById('storageSize').required = true;
+            document.getElementById('mountPath').required = true;
+        } else {
+            document.getElementById('storageSize').required = false;
+            document.getElementById('mountPath').required = false;
         }
+    });
 
-        function closeModalFunc() {
-            higherLimitsModal.classList.remove('show');
-            // Reset form
-            document.getElementById('requestJustification').value = '';
-            requestMemory.checked = false;
-            requestCPU.checked = false;
-            requestStorage.checked = false;
-            updateRequestedValuesVisibility();
-        }
+    // Toggle database options
+    enableDatabase.addEventListener('change', function() {
+        databaseOptions.style.display = this.checked ? 'block' : 'none';
+    });
 
-        requestHigherLimitsBtn.addEventListener('click', openModal);
-        requestHigherStorageBtn.addEventListener('click', openModal);
-        closeModal.addEventListener('click', closeModalFunc);
-        cancelRequest.addEventListener('click', closeModalFunc);
-        closeSuccessModal.addEventListener('click', closeModalFunc);
-
-        // Close modal when clicking outside
-        higherLimitsModal.addEventListener('click', function(e) {
-            if (e.target === higherLimitsModal) {
-                closeModalFunc();
-            }
-        });
-
-        // Update requested values visibility
-        function updateRequestedValuesVisibility() {
-            const anyChecked = requestMemory.checked || requestCPU.checked || requestStorage.checked;
-            requestedValuesSection.style.display = anyChecked ? 'block' : 'none';
-            memoryRequestSection.style.display = requestMemory.checked ? 'block' : 'none';
-            cpuRequestSection.style.display = requestCPU.checked ? 'block' : 'none';
-            storageRequestSection.style.display = requestStorage.checked ? 'block' : 'none';
-        }
-
-        requestMemory.addEventListener('change', updateRequestedValuesVisibility);
-        requestCPU.addEventListener('change', updateRequestedValuesVisibility);
-        requestStorage.addEventListener('change', updateRequestedValuesVisibility);
-
-        // Submit request
-        submitRequest.addEventListener('click', function() {
-            const justification = document.getElementById('requestJustification').value.trim();
-            
-            if (!justification) {
-                alert('Please provide a justification for your request');
-                return;
-            }
-
-            if (!requestMemory.checked && !requestCPU.checked && !requestStorage.checked) {
-                alert('Please select at least one resource to increase');
-                return;
-            }
-
-            // Simulate sending request to DevOps
-            console.log('Request submitted:', {
-                memory: requestMemory.checked ? document.getElementById('requestedMemory').value : null,
-                cpu: requestCPU.checked ? document.getElementById('requestedCPU').value : null,
-                storage: requestStorage.checked ? document.getElementById('requestedStorage').value : null,
-                justification: justification
-            });
-
-            // Show success state
-            requestForm.style.display = 'none';
-            successState.classList.add('show');
-        });
-
-        // Validation functions
-        function validateMemory() {
-            const request = parseInt(document.getElementById('memoryRequest').value);
-            const limit = parseInt(document.getElementById('memoryLimit').value);
-            
-            let valid = true;
-            
-            if (request < 64 || request > 8192) {
-                showError('memoryRequestError');
-                valid = false;
-            } else {
-                hideError('memoryRequestError');
-            }
-            
-            if (limit < 64 || limit > 8192) {
-                showError('memoryLimitError');
-                valid = false;
-            } else if (limit < request) {
-                showError('memoryLimitError');
-                valid = false;
-            } else {
-                hideError('memoryLimitError');
-            }
-            
-            return valid;
-        }
-
-        function validateCPU() {
-            const request = parseInt(document.getElementById('cpuRequest').value);
-            const limit = parseInt(document.getElementById('cpuLimit').value);
-            
-            let valid = true;
-            
-            if (request < 10 || request > 4000) {
-                showError('cpuRequestError');
-                valid = false;
-            } else {
-                hideError('cpuRequestError');
-            }
-            
-            if (limit < 10 || limit > 4000) {
-                showError('cpuLimitError');
-                valid = false;
-            } else if (limit < request) {
-                showError('cpuLimitError');
-                valid = false;
-            } else {
-                hideError('cpuLimitError');
-            }
-            
-            return valid;
-        }
-
-        function validateStorage() {
-            if (!enableStorage.checked) return true;
-            
-            const size = parseInt(document.getElementById('storageSize').value);
-            
-            if (size < 1 || size > 50) {
-                showError('storageSizeError');
-                return false;
-            } else {
-                hideError('storageSizeError');
-                return true;
-            }
-        }
-
-        function validatePodName() {
-            const podName = document.getElementById('podName').value;
-            const pattern = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/;
-            
-            if (!pattern.test(podName)) {
-                showError('podNameError');
-                return false;
-            } else {
-                hideError('podNameError');
-                return true;
-            }
-        }
-
-        function showError(elementId) {
-            const element = document.getElementById(elementId);
-            element.classList.add('show');
-        }
-
-        function hideError(elementId) {
-            const element = document.getElementById(elementId);
-            element.classList.remove('show');
-        }
-
-        // Generate YAML manifest
-        function generateManifest(formData) {
-            const data = Object.fromEntries(formData);
-            const isNewDb = document.getElementById('dbSetupNew').checked;
-            
-            let yaml = `apiVersion: v1
-kind: Pod
-metadata:
-  name: ${data.podName}
-  namespace: ${data.namespace}
-  labels:
-    app: ${data.podName}
-    environment: development
-  annotations:
-    access-control: "admin"`;
-
-            // Add team member annotations if selected
-            const teamMembers = [];
-            if (document.getElementById('accessMember1').checked) teamMembers.push('john.doe');
-            if (document.getElementById('accessMember2').checked) teamMembers.push('jane.smith');
-            if (document.getElementById('accessMember3').checked) teamMembers.push('mike.johnson');
-            
-            if (teamMembers.length > 0) {
-                yaml += `
-    team-access: "${teamMembers.join(',')}"`;
-            }
-
-            yaml += `
-spec:
-  containers:
-  - name: ${data.podName}-container
-    image: ${data.dockerImage}
-    resources:
-      requests:
-        memory: "${data.memoryRequest}Mi"
-        cpu: "${data.cpuRequest}m"
-      limits:
-        memory: "${data.memoryLimit}Mi"
-        cpu: "${data.cpuLimit}m"`;
-
-            if (enableStorage.checked) {
-                yaml += `
-    volumeMounts:
-    - name: ${data.podName}-storage
-      mountPath: ${data.mountPath}`;
-            }
-
-            if (enableDatabase.checked) {
-                if (isNewDb) {
-                    yaml += `
-    env:
-    - name: DB_TYPE
-      value: "${data.databaseTypeNew || 'postgresql'}"
-    - name: DB_NAME
-      value: "${data.dbNameNew || data.podName + '_db'}"
-    - name: DB_HOST
-      valueFrom:
-        secretKeyRef:
-          name: ${data.podName}-db-secret
-          key: host
-    - name: DB_PORT
-      valueFrom:
-        secretKeyRef:
-          name: ${data.podName}-db-secret
-          key: port
-    - name: DB_USER
-      valueFrom:
-        secretKeyRef:
-          name: ${data.podName}-db-secret
-          key: username
-    - name: DB_PASSWORD
-      valueFrom:
-        secretKeyRef:
-          name: ${data.podName}-db-secret
-          key: password`;
-                } else {
-                    yaml += `
-    env:
-    - name: DB_TYPE
-      value: "${data.databaseType}"
-    - name: DB_HOST
-      value: "${data.dbHost}"
-    - name: DB_PORT
-      value: "${data.dbPort || '5432'}"
-    - name: DB_NAME
-      value: "${data.dbName}"`;
-                    
-                    if (data.dbUsername) {
-                        yaml += `
-    - name: DB_USER
-      value: "${data.dbUsername}"`;
-                    }
-                }
-            }
-
-            if (enableStorage.checked) {
-                yaml += `
-  volumes:
-  - name: ${data.podName}-storage
-    persistentVolumeClaim:
-      claimName: ${data.podName}-pvc`;
-            }
-
-            return yaml;
-        }
-
-        // Syntax highlighting for YAML
-        function highlightYAML(yaml) {
-            return yaml
-                .replace(/^(\s*)([a-zA-Z_-]+):/gm, '$1<span class="yaml-key">$2</span>:')
-                .replace(/: "([^"]*)"/g, ': <span class="yaml-string">"$1"</span>')
-                .replace(/: ([0-9]+)/g, ': <span class="yaml-number">$1</span>');
-        }
-
-        // Form submission
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            // Validate all fields
-            const isPodNameValid = validatePodName();
-            const isMemoryValid = validateMemory();
-            const isCPUValid = validateCPU();
-            const isStorageValid = validateStorage();
-            
-            if (!isPodNameValid || !isMemoryValid || !isCPUValid || !isStorageValid) {
-                return;
-            }
-            
-            // Get form data
-            const formData = new FormData(form);
-            const podName = formData.get('podName');
-            const namespace = formData.get('namespace');
-            const dockerImage = formData.get('dockerImage');
-            const hasStorage = enableStorage.checked;
-            const hasDatabase = enableDatabase.checked;
-            
-            // Redirect to deployment progress page with data
-            const params = new URLSearchParams({
-                podName: podName,
-                namespace: namespace,
-                dockerImage: dockerImage,
-                hasStorage: hasStorage,
-                hasDatabase: hasDatabase
-            });
-            
-            window.location.href = `deployment-progress.html?${params.toString()}`;
-        });
-
-        // Reset form
-        resetBtn.addEventListener('click', function() {
-            form.reset();
-            previewSection.classList.remove('show');
-            storageOptions.style.display = 'none';
-            databaseOptions.style.display = 'none';
+    // Toggle between new and existing database forms
+    dbSetupNew.addEventListener('change', function() {
+        if (this.checked) {
             newDatabaseForm.style.display = 'block';
             existingDatabaseForm.style.display = 'none';
-            
-            // Hide all errors
-            document.querySelectorAll('.validation-message').forEach(el => {
-                el.classList.remove('show');
-            });
+        }
+    });
+
+    dbSetupExisting.addEventListener('change', function() {
+        if (this.checked) {
+            newDatabaseForm.style.display = 'none';
+            existingDatabaseForm.style.display = 'block';
+        }
+    });
+
+    // Modal functions
+    function openModal() {
+        higherLimitsModal.classList.add('show');
+        requestForm.style.display = 'block';
+        successState.classList.remove('show');
+    }
+
+    function closeModalFunc() {
+        higherLimitsModal.classList.remove('show');
+        document.getElementById('requestJustification').value = '';
+        requestMemory.checked = false;
+        requestCPU.checked = false;
+        requestStorage.checked = false;
+        updateRequestedValuesVisibility();
+    }
+
+    requestHigherLimitsBtn.addEventListener('click', openModal);
+    requestHigherStorageBtn.addEventListener('click', openModal);
+    closeModal.addEventListener('click', closeModalFunc);
+    cancelRequest.addEventListener('click', closeModalFunc);
+    closeSuccessModal.addEventListener('click', closeModalFunc);
+
+    higherLimitsModal.addEventListener('click', function(e) {
+        if (e.target === higherLimitsModal) {
+            closeModalFunc();
+        }
+    });
+
+    // Update requested values visibility
+    function updateRequestedValuesVisibility() {
+        const anyChecked = requestMemory.checked || requestCPU.checked || requestStorage.checked;
+        requestedValuesSection.style.display = anyChecked ? 'block' : 'none';
+        memoryRequestSection.style.display = requestMemory.checked ? 'block' : 'none';
+        cpuRequestSection.style.display = requestCPU.checked ? 'block' : 'none';
+        storageRequestSection.style.display = requestStorage.checked ? 'block' : 'none';
+    }
+
+    requestMemory.addEventListener('change', updateRequestedValuesVisibility);
+    requestCPU.addEventListener('change', updateRequestedValuesVisibility);
+    requestStorage.addEventListener('change', updateRequestedValuesVisibility);
+
+    // Submit request
+    submitRequest.addEventListener('click', function() {
+        const justification = document.getElementById('requestJustification').value.trim();
+        
+        if (!justification) {
+            alert('Please provide a justification for your request');
+            return;
+        }
+
+        if (!requestMemory.checked && !requestCPU.checked && !requestStorage.checked) {
+            alert('Please select at least one resource to increase');
+            return;
+        }
+
+        console.log('Request submitted:', {
+            memory: requestMemory.checked ? document.getElementById('requestedMemory').value : null,
+            cpu: requestCPU.checked ? document.getElementById('requestedCPU').value : null,
+            storage: requestStorage.checked ? document.getElementById('requestedStorage').value : null,
+            justification: justification
         });
 
-        // Real-time validation
-        document.getElementById('memoryRequest').addEventListener('input', validateMemory);
-        document.getElementById('memoryLimit').addEventListener('input', validateMemory);
-        document.getElementById('cpuRequest').addEventListener('input', validateCPU);
-        document.getElementById('cpuLimit').addEventListener('input', validateCPU);
-        document.getElementById('storageSize').addEventListener('input', validateStorage);
-        document.getElementById('podName').addEventListener('input', validatePodName);
-    </script>
+        requestForm.style.display = 'none';
+        successState.classList.add('show');
+    });
+
+    // Validation functions
+    function validatePodName() {
+        const podName = document.getElementById('podName').value;
+        const pattern = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/;
+        
+        if (!pattern.test(podName)) {
+            showError('podNameError');
+            return false;
+        } else {
+            hideError('podNameError');
+            return true;
+        }
+    }
+
+    function showError(elementId) {
+        const element = document.getElementById(elementId);
+        if (element) element.classList.add('show');
+    }
+
+    function hideError(elementId) {
+        const element = document.getElementById(elementId);
+        if (element) element.classList.remove('show');
+    }
+
+    // Form submission - UPDATED FOR GITOPS!
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        if (!validatePodName()) {
+            return;
+        }
+        
+        const podName = document.getElementById('podName').value;
+        const namespace = document.getElementById('namespace').value;
+        const dockerImage = document.getElementById('dockerImage').value;
+        const hasStorage = enableStorage.checked;
+        const hasDatabase = enableDatabase.checked;
+        
+        if (!podName || !namespace || !dockerImage) {
+            alert('Please fill in all required fields');
+            return;
+        }
+        
+        const deployBtn = form.querySelector('button[type="submit"]');
+        deployBtn.disabled = true;
+        deployBtn.textContent = 'Deploying...';
+        
+        try {
+            const apiClient = new ApiClient();
+            await apiClient.getToken();
+            
+            const response = await apiClient.deploy({
+                pod_name: podName,
+                namespace: namespace,
+                docker_image: dockerImage,
+                has_storage: hasStorage,
+                has_database: hasDatabase
+            });
+            
+            // Store in sessionStorage (not URL!)
+            sessionStorage.setItem('currentDeployment', JSON.stringify({
+                pod_name: response.pod_name,
+                namespace: response.namespace,
+                docker_image: dockerImage,
+                repository_url: response.repository_url,
+                argocd_url: response.argocd_url,
+                cleanup_at: response.cleanup_at,
+                status: response.status,
+                has_storage: hasStorage,
+                has_database: hasDatabase
+            }));
+            
+            // Clean URL redirect!
+            window.location.href = '/deployment-progress.html';
+            
+        } catch (error) {
+            console.error('Deployment failed:', error);
+            alert(`Deployment failed: ${error.message}`);
+            deployBtn.disabled = false;
+            deployBtn.textContent = 'Deploy to Cluster';
+        }
+    });
+
+    // Reset form
+    resetBtn.addEventListener('click', function() {
+        form.reset();
+        storageOptions.style.display = 'none';
+        databaseOptions.style.display = 'none';
+        newDatabaseForm.style.display = 'block';
+        existingDatabaseForm.style.display = 'none';
+        
+        document.querySelectorAll('.validation-message').forEach(el => {
+            el.classList.remove('show');
+        });
+    });
+
+    // Real-time validation
+    document.getElementById('podName').addEventListener('input', validatePodName);
+</script>
+
+
 </body>
 </html>
