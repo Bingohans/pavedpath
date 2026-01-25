@@ -4,7 +4,6 @@ from datetime import datetime
 from typing import Dict, List
 from github_client import GitHubClient
 from argocd_client import ArgoCDClient
-from main import github_client, argocd_client
 
 import logging
 
@@ -178,6 +177,7 @@ class CleanupScheduler:
                 namespace, pod_name = key.split("/")
                 
                 try:
+                    from main import github_client, argocd_client
                     # 1. Delete ArgoCD application (if enabled)
                     if data.get("cleanup_argocd") and argocd_client:
                         logger.info(f"Deleting ArgoCD application: {pod_name}")
