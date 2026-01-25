@@ -29,6 +29,8 @@ metadata:
     version: v1
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: paved-roads-frontend
