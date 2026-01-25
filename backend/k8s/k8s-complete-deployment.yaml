@@ -77,10 +77,19 @@ spec:
           mountPath: /usr/share/nginx/html/env-config.js
           subPath: env-config.js
           readOnly: true
+        - name: frontend-data
+          mountPath: /var/cache/nginx
+          subPath: cache
+        - name: frontend-data
+          mountPath: /var/log/nginx
+          subPath: logs
       volumes:
       - name: config
         configMap:
           name: frontend-config
+      - name: frontend-data
+        persistentVolumeClaim:
+          claimName: paved-roads-frontend-data
 ---
 apiVersion: v1
 kind: Service

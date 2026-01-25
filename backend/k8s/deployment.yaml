@@ -88,13 +88,23 @@ spec:
           mountPath: /tmp
         - name: cache
           mountPath: /app/.cache
+        - name: backend-data
+          mountPath: /app/data
+          subPath: data
+        - name: backend-data
+          mountPath: /app/logs
+          subPath: logs
+
       
       volumes:
       - name: tmp
         emptyDir: {}
       - name: cache
         emptyDir: {}
-      
+      - name: backend-data
+        persistentVolumeClaim:
+          claimName: paved-roads-backend-data 
+
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:

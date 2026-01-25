@@ -1,0 +1,29 @@
+---
+# Backend PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: paved-roads-backend-data
+  namespace: paved-roads
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: rook-ceph.rbd.csi.ceph.com
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+# Frontend PVC (optional)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: paved-roads-frontend-data
+  namespace: paved-roads
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: rook-ceph.rbd.csi.ceph.com
+  resources:
+    requests:
+      storage: 5Gi
