@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Dict, List
 from github_client import GitHubClient
 from argocd_client import ArgoCDClient
+from main import github_client, argocd_client
 
 import logging
 
@@ -158,12 +159,10 @@ class CleanupScheduler:
             return self.scheduled_cleanups.get(key)
 
     def _cleanup_loop(self):
-    """Background thread that performs scheduled cleanups"""
-    logger.info("Cleanup scheduler started")
+         """Background thread that performs scheduled cleanups"""
+         logger.info("Cleanup scheduler started")
     
-    # Get GitOps clients (from main.py or pass as parameters)
-    from main import github_client, argocd_client
-    
+    # Get GitOps clients (from main.py or pass as parameters)    
     while self.running:
         try:
             now = datetime.utcnow()
