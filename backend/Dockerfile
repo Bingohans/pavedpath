@@ -1,4 +1,4 @@
-# Multi-stage build for smaller image
+# backend/Dockerfile
 FROM python:3.11-slim AS builder
 
 WORKDIR /app

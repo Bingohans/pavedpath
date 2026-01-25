@@ -42,7 +42,7 @@ spec:
       - name: ghcr-secret
       containers:
       - name: frontend
-        image: ghcr.io/bingoniels/pavedpath/paved-roads-frontend:latest
+        image: ghcr.io/bingohans/pavedpath/paved-roads-frontend:latest
         imagePullPolicy: Always
         
         ports:
