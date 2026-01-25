@@ -1,8 +1,3 @@
-"""
-Kubernetes Paved Roads Deployment API
-Secure backend for pod deployment with validation and rate limiting
-"""
-
 from fastapi import FastAPI, HTTPException, Depends, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -13,11 +8,11 @@ from datetime import datetime, timedelta
 from typing import Optional
 import logging
 
-from .models import DeploymentRequest, DeploymentResponse, User
-from .validator import DeploymentValidator
-from .auth import get_current_user, create_demo_token
-from .k8s_client import KubernetesClient
-from .cleanup import CleanupScheduler
+from models import DeploymentRequest, DeploymentResponse, User
+from validator import DeploymentValidator
+from auth import get_current_user, create_demo_token
+from k8s_client import KubernetesClient
+from cleanup import CleanupScheduler
 
 # Configure logging
 logging.basicConfig(

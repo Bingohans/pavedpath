@@ -1,8 +1,3 @@
-"""
-Authentication and authorization module
-Handles JWT tokens and user permissions
-"""
-
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
@@ -11,7 +6,7 @@ from typing import Optional
 import logging
 import os
 
-from .models import User
+from models import User
 
 logger = logging.getLogger(__name__)
 
