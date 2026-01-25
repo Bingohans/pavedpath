@@ -122,15 +122,15 @@ class GitHubClient:
         docker_image: str,
         has_storage: bool,
         has_database: bool,
-        resource_limits: Optional[Dict] = None,
+        resources: Optional[Dict] = None,
     ) -> Dict[str, str]:
         """Generate Kubernetes manifest files"""
 
         manifests = {}
 
         # Default resource limits
-        if resource_limits:
-            resources = resource_limits
+        if resources:
+            resources = resources
         else:
             resources = {
                 "memory_request": "256Mi",
