@@ -18,8 +18,28 @@ from k8s_client import KubernetesClient
 from cleanup import CleanupScheduler
 
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
-ARGOCD_URL = os.getenv("ARGOCD_URL", "https://argocd.yourdomain.com")
+GITHUB_ORG = os.getenv("GITHUB_ORG")
+ARGOCD_URL = os.getenv("ARGOCD_URL", "https://argocd-server.argocd.svc.cluster.local")
 ARGOCD_TOKEN = os.getenv("ARGOCD_TOKEN")
+
+github_client = None
+argocd_client = None
+
+if GITHUB_TOKEN:
+    from github_client import GitHubClient
+    try:
+        github_client = GitHubClient(token=GITHUB_TOKEN, org_name=GITHUB_ORG)
+        logger.info("GitHub client initialized")
+    except Exception as e:
+        logger.error(f"Failed to initialize GitHub client: {e}")
+
+if ARGOCD_TOKEN and ARGOCD_URL:
+    from argocd_client import ArgoCDClient
+    try:
+        argocd_client = ArgoCDClient(url=ARGOCD_URL, token=ARGOCD_TOKEN)
+        logger.info("ArgoCD client initialized")
+    except Exception as e:
+        logger.error(f"Failed to initialize ArgoCD client: {e}")
 
 # Configure logging
 logging.basicConfig(

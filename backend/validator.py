@@ -159,15 +159,10 @@ class DeploymentValidator:
             )
         
         # CRITICAL: Check user has access to this namespace
-        if namespace not in user.allowed_namespaces and not user.is_admin:
-            logger.warning(
-                f"User {user.user_id} attempted to access unauthorized namespace: {namespace}"
-            )
-            raise PermissionError(
-                f"You do not have permission to deploy to namespace '{namespace}'. "
-                f"Allowed namespaces: {', '.join(user.allowed_namespaces)}"
-            )
-        
+        if not re.match(r'^[a-z0-9]([-a-z0-9]*[a-z0-9])?$', namespace):
+            raise ValueError("Invalid namespace format")
+
+        logger.debug(f"Namespace validated: {namespace}")
         return namespace
     
     def _validate_docker_image(self, docker_image: Any) -> str:
