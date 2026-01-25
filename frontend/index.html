@@ -718,7 +718,9 @@
                         <input 
                             type="text" 
                             id="podName" 
-                            name="podName" 
+                            name="podName"
+                            pattern="^[a-z0-9]([\-a-z0-9]*[a-z0-9])?$"
+                            title="Lowercase letters, numbers, and hyphens only"
                             placeholder="my-application"
                             required
                         >
