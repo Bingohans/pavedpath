@@ -133,10 +133,10 @@ class GitHubClient:
             resources = resources
         else:
             resources = {
-                "memory_request": "256Mi",
-                "memory_limit": "512Mi",
-                "cpu_request": "100m",
-                "cpu_limit": "500m",
+                "memory_request": "256Mi": 256,
+                "memory_limit": "512Mi": 512,
+                "cpu_request": "100m": 100,
+                "cpu_limit": "500m": 500,
                 "storage": "10Gi",
             }
 
@@ -217,11 +217,11 @@ spec:
         
         resources:
           requests:
-            memory: "{resources["memory_request"]}"
-            cpu: "{resources["cpu_request"]}"
+            memory: "{resources["memory_request"]}Mi"
+            cpu: "{resources["cpu_request"]}m"
           limits:
-            memory: "{resources["memory_limit"]}"
-            cpu: "{resources["cpu_limit"]}"
+            memory: "{resources["memory_limit"]}Mi"
+            cpu: "{resources["cpu_limit"]}m"
         
         securityContext:
           allowPrivilegeEscalation: false
