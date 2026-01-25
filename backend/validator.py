@@ -48,7 +48,7 @@ class DeploymentValidator:
         Validate and sanitize deployment request
         
         Args:
-            request_data: Raw request data from client
+            deployment_request: Raw request data from client
             user: Authenticated user object
             
         Returns:
@@ -62,15 +62,15 @@ class DeploymentValidator:
         logger.info(f"Validating deployment request for user: {user.user_id}")
         
         # 1. Validate pod name
-        pod_name = self._validate_pod_name(request_data.get('pod_name'))
+        pod_name = self._validate_pod_name(deployment_request.pod_name)
         logger.debug(f"Pod name validated: {pod_name}")
         
         # 2. Validate namespace and check permissions
-        namespace = self._validate_namespace(request_data.get('namespace'), user)
+        namespace = self._validate_namespace(deployment_request.namespace, user)
         logger.debug(f"Namespace validated: {namespace}")
         
         # 3. Validate Docker image (CRITICAL - whitelist only)
-        docker_image = self._validate_docker_image(request_data.get('docker_image'))
+        docker_image = self._validate_docker_image(deployment_request.docker_image)
         logger.debug(f"Docker image validated: {docker_image}")
         
         # 4. Enforce fixed resource limits (ignore client values)
@@ -78,11 +78,11 @@ class DeploymentValidator:
         logger.debug(f"Resource limits enforced: {resources}")
         
         # 5. Validate storage request
-        has_storage = request_data.get('has_storage', False)
+        has_storage = deployment_request.has_storage
         storage_gb = self.FIXED_STORAGE_GB if has_storage else 0
         
         # 6. Validate database request
-        has_database = request_data.get('has_database', False)
+        has_database = deployment_request.has_database
         
         # 7. Build validated configuration
         validated_config = {
