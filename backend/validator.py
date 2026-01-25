@@ -95,8 +95,7 @@ class DeploymentValidator:
                  'cpu_request': f"{resources['cpu_request_m']}m",
                  'cpu_limit': f"{resources['cpu_limit_m']}m",
                  'storage': f"{storage_gb}Gi"
-            }, 
-            'storage_gb': storage_gb,
+            },
             'has_storage': has_storage,
             'has_database': has_database,
             'user_id': user.user_id,
