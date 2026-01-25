@@ -129,7 +129,9 @@ class GitHubClient:
         manifests = {}
         
         # Default resource limits
-        if not resources:
+        if resource_limits:
+            resources = resource_limits
+        else:
             resources = {
                 "memory_request": "256Mi",
                 "memory_limit": "512Mi",
