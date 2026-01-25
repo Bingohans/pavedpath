@@ -37,8 +37,9 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}
           tags: |
+            type=sha,prefix={{branch}}-  # ← main-abc123
             type=raw,value=latest
       
       - name: Build and push Frontend
@@ -70,13 +71,14 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      
+       # .github/workflows/docker-build.yml
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}
           tags: |
+            type=sha,prefix={{branch}}-  # ← main-abc123
             type=raw,value=latest
       
       - name: Build and push Backend

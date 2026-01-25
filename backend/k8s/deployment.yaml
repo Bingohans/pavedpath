@@ -29,7 +29,7 @@ spec:
       
       containers:
       - name: api
-        image: ghcr.io/bingohans/pavedpath/paved-roads-backend:latest
+        image: ghcr.io/bingohans/pavedpath/paved-roads-backend:main-abc123
         imagePullPolicy: Always
         
         ports:
