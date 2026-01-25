@@ -45,6 +45,28 @@ spec:
             secretKeyRef:
               name: paved-roads-api-secrets
               key: jwt-secret
+        - name: GITHUB_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: paved-roads-api-secrets
+              key: GITHUB_TOKEN
+        - name: GITHUB_ORG
+          valueFrom:
+            secretKeyRef:
+              name: paved-roads-api-secrets
+              key: GITHUB_ORG
+        - name: ARGOCD_URL
+          valueFrom:
+            secretKeyRef:
+              name: paved-roads-api-secrets
+              key: ARGOCD_URL
+        - name: ARGOCD_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: paved-roads-api-secrets
+              key: ARGOCD_TOKEN
+        - name: AUTO_CLEANUP_MINUTES
+          value: "5"
         - name: LOG_LEVEL
           value: "INFO"
         - name: RATE_LIMIT_PER_HOUR
