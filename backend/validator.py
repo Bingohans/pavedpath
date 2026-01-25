@@ -89,7 +89,7 @@ class DeploymentValidator:
             'pod_name': pod_name,
             'namespace': namespace,
             'docker_image': docker_image,
-            'resource_limits': resources,
+            'resource_limits': {
                  'memory_request': f"{resources['memory_request_mb']}Mi",
                  'memory_limit': f"{resources['memory_limit_mb']}Mi",
                  'cpu_request': f"{resources['cpu_request_m']}m",
