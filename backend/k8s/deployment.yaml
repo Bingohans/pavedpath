@@ -18,7 +18,8 @@ spec:
         version: v1
     spec:
       serviceAccountName: paved-roads-api
-      
+      imagePullSecrets:
+      - name: ghcr-secret
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000

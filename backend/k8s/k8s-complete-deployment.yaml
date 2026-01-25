@@ -38,6 +38,8 @@ spec:
         app: paved-roads-frontend
         version: v1
     spec:
+      imagePullSecrets:
+      - name: ghcr-secret
       containers:
       - name: frontend
         image: ghcr.io/bingoniels/pavedpath/paved-roads-frontend:latest
