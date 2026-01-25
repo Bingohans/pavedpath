@@ -44,8 +44,8 @@ class DeploymentValidator:
     
     def validate_deployment_request(
         self,
-        request_data: Dict[str, Any],
-        user: Any
+        deployment_request: DeploymentRequest,
+        user: User
     ) -> Dict[str, Any]:
         """
         Validate and sanitize deployment request

@@ -125,10 +125,8 @@ async def deploy_pod(
     try:
         # 1. Validate request
         validated_data = validator.validate_deployment_request(
-            pod_name=deployment_request.pod_name,
-            namespace=deployment_request.namespace,
-            docker_image=deployment_request.docker_image,
-            user=current_user
+            deployment_request,  # ← Send hele request object
+            current_user
         )
         
         logger.info(f"Deploying {validated_data['pod_name']} to {validated_data['namespace']} via GitOps")
