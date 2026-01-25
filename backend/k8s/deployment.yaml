@@ -50,11 +50,6 @@ spec:
             secretKeyRef:
               name: paved-roads-api-secrets
               key: GITHUB_TOKEN
-        - name: GITHUB_ORG
-          valueFrom:
-            secretKeyRef:
-              name: paved-roads-api-secrets
-              key: GITHUB_ORG
         - name: ARGOCD_URL
           valueFrom:
             secretKeyRef:
