@@ -16,6 +16,13 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 from validator import DeploymentValidator
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
+
+
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 GITHUB_ORG = os.getenv("GITHUB_ORG")
@@ -45,12 +52,6 @@ if ARGOCD_TOKEN and ARGOCD_URL:
         logger.info("ArgoCD client initialized")
     except Exception as e:
         logger.error(f"Failed to initialize ArgoCD client: {e}")
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
 
 # Initialize FastAPI app
 app = FastAPI(
