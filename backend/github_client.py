@@ -45,7 +45,7 @@ class GitHubClient:
         docker_image: str,
         has_storage: bool,
         has_database: bool,
-        resource_limits: Optional[Dict] = None
+        resources: Optional[Dict] = None
     ) -> str:
         """
         Create GitHub repository with Kubernetes manifests
@@ -83,7 +83,7 @@ class GitHubClient:
                 docker_image=docker_image,
                 has_storage=has_storage,
                 has_database=has_database,
-                resource_limits=resource_limits
+                resources=resources
             )
             
             # Create k8s directory and files
@@ -122,15 +122,15 @@ class GitHubClient:
         docker_image: str,
         has_storage: bool,
         has_database: bool,
-        resource_limits: Optional[Dict] = None
+        resources: Optional[Dict] = None
     ) -> Dict[str, str]:
         """Generate Kubernetes manifest files"""
         
         manifests = {}
         
         # Default resource limits
-        if not resource_limits:
-            resource_limits = {
+        if not resources:
+            resources = {
                 "memory_request": "256Mi",
                 "memory_limit": "512Mi",
                 "cpu_request": "100m",
@@ -209,11 +209,11 @@ spec:
         
         resources:
           requests:
-            memory: "{resource_limits['memory_request']}"
-            cpu: "{resource_limits['cpu_request']}"
+            memory: "{resources['memory_request']}"
+            cpu: "{resources['cpu_request']}"
           limits:
-            memory: "{resource_limits['memory_limit']}"
-            cpu: "{resource_limits['cpu_limit']}"
+            memory: "{resources['memory_limit']}"
+            cpu: "{resources['cpu_limit']}"
         
         securityContext:
           allowPrivilegeEscalation: false
@@ -269,7 +269,7 @@ spec:
   storageClassName: rook-ceph-block
   resources:
     requests:
-      storage: {resource_limits['storage']}
+      storage: {resources['storage']}
 """
         
         # 5. Secret (if database requested)
