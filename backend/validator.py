@@ -1,11 +1,8 @@
-"""
-Deployment request validator with security enforcement
-All validation happens server-side - NEVER trust client input
-"""
 
 from typing import Dict, Any
 import re
 import logging
+from models import DeploymentRequest, User 
 
 logger = logging.getLogger(__name__)
 

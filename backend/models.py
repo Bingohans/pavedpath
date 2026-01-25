@@ -1,7 +1,3 @@
-"""
-Pydantic models for request validation and response serialization
-"""
-
 from pydantic import BaseModel, Field, validator
 from typing import Optional, List
 from datetime import datetime
