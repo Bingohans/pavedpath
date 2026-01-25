@@ -10,12 +10,6 @@ logger = logging.getLogger(__name__)
 class DeploymentValidator:
     """
     Validates deployment requests with strict security rules
-
-    Security principles:
-    1. Whitelist only - reject everything not explicitly allowed
-    2. Enforce limits server-side - ignore client values
-    3. Validate all inputs - sanitize and check format
-    4. Check permissions - verify namespace access
     """
 
     # Whitelist of allowed Docker images
@@ -38,6 +32,21 @@ class DeploymentValidator:
     # Kubernetes naming pattern
     K8S_NAME_PATTERN = r"^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
     MAX_NAME_LENGTH = 63
+
+    # ADD THIS METHOD HERE ↓
+    def _enforce_resource_limits(self) -> Dict[str, int]:
+        """
+        Enforce fixed resource limits
+
+        CRITICAL: These values are FIXED server-side
+        Client values are completely ignored
+        """
+        return {
+            "memory_request_mb": self.FIXED_MEMORY_REQUEST_MB,
+            "memory_limit_mb": self.FIXED_MEMORY_LIMIT_MB,
+            "cpu_request_m": self.FIXED_CPU_REQUEST_M,
+            "cpu_limit_m": self.FIXED_CPU_LIMIT_M,
+        }
 
     def validate_deployment_request(
         self, deployment_request: DeploymentRequest, user: User
