@@ -185,7 +185,7 @@ async def deploy_pod(
                 docker_image=validated_data["docker_image"],
                 has_storage=deployment_request.has_storage,
                 has_database=deployment_request.has_database,
-                resource_limits=validated_data["resources"],
+                resources=validated_data["resources"],
             )
             logger.info(f"GitHub repository created: {repo_url}")
         except Exception as e:
