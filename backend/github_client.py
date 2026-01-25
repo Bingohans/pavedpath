@@ -133,10 +133,10 @@ class GitHubClient:
             resources = resources
         else:
             resources = {
-                "memory_request_mb": "256Mi": 256,
-                "memory_limit_mb": "512Mi": 512,
-                "cpu_request_m": "100m": 100,
-                "cpu_limit_m": "500m": 500,
+                "memory_request_mb": 256,
+                "memory_limit_mb": 512,
+                "cpu_request_m": 100,
+                "cpu_limit_m": 500,
                 "storage": "10Gi",
             }
 
