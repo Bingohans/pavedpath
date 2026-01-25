@@ -157,14 +157,7 @@ async def deploy_pod(
             logger.warning("GitOps not configured, using direct K8s deployment")
             
             # Use existing k8s_client deployment
-            result = k8s_client.deploy_pod(
-                pod_name=validated_data["pod_name"],
-                namespace=validated_data["namespace"],
-                docker_image=validated_data["docker_image"],
-                resource_limits=validated_data["resource_limits"],
-                has_storage=deployment_request.has_storage,
-                has_database=deployment_request.has_database
-            )
+            result = k8s_client.deploy_pod(validated_data)
             
             # Schedule cleanup
             cleanup_time = datetime.utcnow() + timedelta(minutes=AUTO_CLEANUP_MINUTES)
