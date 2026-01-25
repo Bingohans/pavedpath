@@ -217,11 +217,11 @@ spec:
         
         resources:
           requests:
-            memory: "{resources["memory_request"]}Mi"
-            cpu: "{resources["cpu_request"]}m"
+            memory: "{resources["memory_request_mb"]}Mi"
+            cpu: "{resources["cpu_request_m"]}m"
           limits:
-            memory: "{resources["memory_limit"]}Mi"
-            cpu: "{resources["cpu_limit"]}m"
+            memory: "{resources["memory_limit_mb"]}Mi"
+            cpu: "{resources["cpu_limit_m"]}m"
         
         securityContext:
           allowPrivilegeEscalation: false
