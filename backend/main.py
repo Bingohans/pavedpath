@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 from github_client import GitHubClient
 from argocd_client import ArgoCDClient
+import os
 import logging
 
 from models import DeploymentRequest, DeploymentResponse, User
