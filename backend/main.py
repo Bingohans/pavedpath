@@ -6,6 +6,8 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from datetime import datetime, timedelta
 from typing import Optional
+from github_client import GitHubClient
+from argocd_client import ArgoCDClient
 import logging
 
 from models import DeploymentRequest, DeploymentResponse, User
@@ -13,6 +15,10 @@ from validator import DeploymentValidator
 from auth import get_current_user, create_demo_token
 from k8s_client import KubernetesClient
 from cleanup import CleanupScheduler
+
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+ARGOCD_URL = os.getenv("ARGOCD_URL", "https://argocd.yourdomain.com")
+ARGOCD_TOKEN = os.getenv("ARGOCD_TOKEN")
 
 # Configure logging
 logging.basicConfig(
@@ -106,125 +112,164 @@ async def get_demo_token(request: Request):
         )
 
 
+
 @app.post("/api/deploy", response_model=DeploymentResponse)
-@limiter.limit("3/hour")  # Max 3 deployments per hour per IP
 async def deploy_pod(
-    request: Request,
     deployment_request: DeploymentRequest,
     current_user: User = Depends(get_current_user)
 ):
     """
-    Deploy a pod to Kubernetes cluster with full validation
-    
-    Security measures:
-    - Rate limited to 3 deployments per hour
-    - Requires authentication
-    - Validates all inputs server-side
-    - Enforces resource limits
-    - Only allows whitelisted images
+    Deploy pod via GitOps (GitHub + ArgoCD)
     """
-    
-    logger.info(f"Deployment request from user {current_user.user_id}: {deployment_request.pod_name}")
-    
     try:
-        # 1. Validate and sanitize input
+        # 1. Validate request
         validated_data = validator.validate_deployment_request(
-            deployment_request.dict(),
-            current_user
+            pod_name=deployment_request.pod_name,
+            namespace=deployment_request.namespace,
+            docker_image=deployment_request.docker_image,
+            user=current_user
         )
         
-        logger.info(f"Validation passed for pod: {validated_data['pod_name']}")
+        logger.info(f"Deploying {validated_data['pod_name']} to {validated_data['namespace']} via GitOps")
         
-        # 2. Check for existing deployment with same name
-        if k8s_client.pod_exists(validated_data['pod_name'], validated_data['namespace']):
-            logger.warning(f"Pod already exists: {validated_data['pod_name']}")
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=f"Pod '{validated_data['pod_name']}' already exists in namespace '{validated_data['namespace']}'"
+        # 2. Check if GitOps is enabled
+        if not github_client or not argocd_client:
+            # Fallback to direct K8s deployment (demo mode)
+            logger.warning("GitOps not configured, using direct K8s deployment")
+            
+            # Use existing k8s_client deployment
+            result = k8s_client.deploy_pod(
+                pod_name=validated_data["pod_name"],
+                namespace=validated_data["namespace"],
+                docker_image=validated_data["docker_image"],
+                resource_limits=validated_data["resource_limits"],
+                has_storage=deployment_request.has_storage,
+                has_database=deployment_request.has_database
+            )
+            
+            # Schedule cleanup
+            cleanup_time = datetime.utcnow() + timedelta(minutes=AUTO_CLEANUP_MINUTES)
+            cleanup_scheduler.schedule_cleanup(
+                validated_data["namespace"],
+                validated_data["pod_name"],
+                cleanup_time
+            )
+            
+            return DeploymentResponse(
+                success=True,
+                message=f"Pod {validated_data['pod_name']} deployed successfully (demo mode)",
+                pod_name=validated_data["pod_name"],
+                namespace=validated_data["namespace"],
+                status="deploying",
+                cleanup_at=cleanup_time,
+                repository_url=f"https://github.com/demo/{validated_data['namespace']}-{validated_data['pod_name']}",
+                argocd_url=f"{ARGOCD_URL}/applications/{validated_data['pod_name']}"
             )
         
-        # 3. Deploy to Kubernetes
-        deployment_result = k8s_client.deploy_pod(validated_data)
+        # 3. GitOps Mode: Create GitHub repository
+        try:
+            repo_url = github_client.create_deployment_repo(
+                pod_name=validated_data["pod_name"],
+                namespace=validated_data["namespace"],
+                docker_image=validated_data["docker_image"],
+                has_storage=deployment_request.has_storage,
+                has_database=deployment_request.has_database,
+                resource_limits=validated_data["resource_limits"]
+            )
+            logger.info(f"GitHub repository created: {repo_url}")
+        except Exception as e:
+            logger.error(f"Failed to create GitHub repo: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to create GitHub repository: {str(e)}"
+            )
         
-        logger.info(f"Successfully deployed pod: {validated_data['pod_name']}")
+        # 4. Create ArgoCD Application
+        try:
+            argocd_client.create_application(
+                app_name=validated_data["pod_name"],
+                repo_url=repo_url,
+                namespace=validated_data["namespace"],
+                path="k8s",
+                auto_sync=True
+            )
+            logger.info(f"ArgoCD application created: {validated_data['pod_name']}")
+        except Exception as e:
+            logger.error(f"Failed to create ArgoCD app: {e}")
+            # Try to cleanup GitHub repo
+            repo_name = f"{validated_data['namespace']}-{validated_data['pod_name']}"
+            github_client.delete_repo(repo_name)
+            
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to create ArgoCD application: {str(e)}"
+            )
         
-        # 4. Schedule cleanup (5 minutes for demo)
-        cleanup_time = datetime.utcnow() + timedelta(minutes=5)
+        # 5. Schedule cleanup (for both GitHub and ArgoCD)
+        cleanup_time = datetime.utcnow() + timedelta(minutes=AUTO_CLEANUP_MINUTES)
         cleanup_scheduler.schedule_cleanup(
-            pod_name=validated_data['pod_name'],
-            namespace=validated_data['namespace'],
-            cleanup_time=cleanup_time
+            validated_data["namespace"],
+            validated_data["pod_name"],
+            cleanup_time,
+            cleanup_github=True,  # NEW: Also cleanup GitHub repo
+            cleanup_argocd=True   # NEW: Also cleanup ArgoCD app
         )
         
-        logger.info(f"Scheduled cleanup for {validated_data['pod_name']} at {cleanup_time}")
+        # 6. Return response with REAL URLs
+        argocd_app_url = f"{ARGOCD_URL}/applications/{validated_data['pod_name']}"
         
-        # 5. Return deployment info
         return DeploymentResponse(
             success=True,
-            pod_name=validated_data['pod_name'],
-            namespace=validated_data['namespace'],
-            status="deploying",
-            message="Deployment initiated successfully",
-            cleanup_at=cleanup_time.isoformat(),
-            repository_url=f"https://github.com/demo/{validated_data['namespace']}-{validated_data['pod_name']}",
-            argocd_url=f"https://argocd.demo.local/applications/{validated_data['pod_name']}"
+            message=f"Deployment initiated via GitOps for {validated_data['pod_name']}",
+            pod_name=validated_data["pod_name"],
+            namespace=validated_data["namespace"],
+            status="syncing",  # ArgoCD is syncing
+            cleanup_at=cleanup_time,
+            repository_url=repo_url,  # REAL GitHub URL
+            argocd_url=argocd_app_url  # REAL ArgoCD URL
         )
-        
-    except ValueError as e:
-        logger.warning(f"Validation error: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
-    except PermissionError as e:
-        logger.warning(f"Permission error: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=str(e)
-        )
-    except Exception as e:
-        logger.error(f"Deployment failed: {str(e)}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Deployment failed. Please try again or contact support."
-        )
-
-
-@app.get("/api/deployment/{namespace}/{pod_name}")
-async def get_deployment_status(
-    namespace: str,
-    pod_name: str,
-    current_user: User = Depends(get_current_user)
-):
-    """Get current status of a deployment"""
-    
-    try:
-        # Verify user has access to this namespace
-        if namespace not in current_user.allowed_namespaces:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied to this namespace"
-            )
-        
-        # Get pod status from Kubernetes
-        status_info = k8s_client.get_pod_status(pod_name, namespace)
-        
-        if not status_info:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Deployment not found"
-            )
-        
-        return status_info
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to get deployment status: {str(e)}")
+        logger.error(f"Deployment failed: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to retrieve deployment status"
+            detail=f"Deployment failed: {str(e)}"
         )
+
+
+@app.get("/api/deployment/{namespace}/{pod_name}/argocd-status")
+async def get_argocd_status(
+    namespace: str,
+    pod_name: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Get ArgoCD sync and health status"""
+    
+    if not argocd_client:
+        return {
+            "sync_status": "unknown",
+            "health_status": "unknown",
+            "message": "ArgoCD not configured"
+        }
+    
+    try:
+        sync_status = argocd_client.get_application_status(pod_name)
+        health_status = argocd_client.get_application_health(pod_name)
+        
+        return {
+            "sync_status": sync_status or "not_found",
+            "health_status": health_status or "not_found",
+            "argocd_url": f"{ARGOCD_URL}/applications/{pod_name}"
+        }
+    except Exception as e:
+        logger.error(f"Failed to get ArgoCD status: {e}")
+        return {
+            "sync_status": "error",
+            "health_status": "error",
+            "message": str(e)
+        }
 
 
 @app.delete("/api/deployment/{namespace}/{pod_name}")
@@ -274,40 +319,37 @@ async def delete_deployment(
         )
 
 
-@app.get("/api/deployments")
-async def list_deployments(
-    namespace: Optional[str] = None,
+@app.get("/api/deployment/{namespace}/{pod_name}/argocd")  # ← Ændret path!
+async def get_argocd_status(
+    namespace: str,
+    pod_name: str,
     current_user: User = Depends(get_current_user)
 ):
-    """List all deployments (filtered by user's accessible namespaces)"""
+    """Get ArgoCD sync and health status"""
+    
+    if not argocd_client:
+        return {
+            "sync_status": "unknown",
+            "health_status": "unknown",
+            "message": "ArgoCD not configured"
+        }
     
     try:
-        # Filter namespaces by user permissions
-        namespaces = [namespace] if namespace else current_user.allowed_namespaces
-        
-        # Verify access to requested namespace
-        if namespace and namespace not in current_user.allowed_namespaces:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied to this namespace"
-            )
-        
-        deployments = k8s_client.list_pods(namespaces)
+        sync_status = argocd_client.get_application_status(pod_name)
+        health_status = argocd_client.get_application_health(pod_name)
         
         return {
-            "deployments": deployments,
-            "total": len(deployments)
+            "sync_status": sync_status or "not_found",
+            "health_status": health_status or "not_found",
+            "argocd_url": f"{ARGOCD_URL}/applications/{pod_name}"
         }
-        
-    except HTTPException:
-        raise
     except Exception as e:
-        logger.error(f"Failed to list deployments: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to retrieve deployments"
-        )
-
+        logger.error(f"Failed to get ArgoCD status: {e}")
+        return {
+            "sync_status": "error",
+            "health_status": "error",
+            "message": str(e)
+        }
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):

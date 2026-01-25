@@ -1,12 +1,10 @@
-"""
-Cleanup scheduler for automatic deletion of demo deployments
-Runs background tasks to delete pods after expiration time
-"""
-
 import threading
 import time
 from datetime import datetime
 from typing import Dict, List
+from github_client import GitHubClient
+from argocd_client import ArgoCDClient
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -54,32 +52,32 @@ class CleanupScheduler:
         
         logger.info("Cleanup scheduler stopped")
     
-    def schedule_cleanup(
-        self,
-        pod_name: str,
-        namespace: str,
-        cleanup_time: datetime
-    ):
-        """
-        Schedule a pod for cleanup
-        
-        Args:
-            pod_name: Name of pod to cleanup
-            namespace: Namespace of pod
-            cleanup_time: When to delete the pod
-        """
-        key = f"{namespace}/{pod_name}"
-        
-        with self.lock:
-            self.scheduled_cleanups[key] = {
-                "pod_name": pod_name,
-                "namespace": namespace,
-                "cleanup_time": cleanup_time,
-                "scheduled_at": datetime.utcnow()
-            }
-        
-        logger.info(
-            f"Scheduled cleanup for {key} at {cleanup_time.isoformat()}"
+        def schedule_cleanup(
+            self,
+            namespace: str,
+            pod_name: str,
+            cleanup_time: datetime,
+            cleanup_github: bool = False,
+            cleanup_argocd: bool = False
+        ):
+            """
+            Schedule cleanup for deployment
+    
+            Args:
+                namespace: Kubernetes namespace
+                pod_name: Pod name
+                cleanup_time: When to cleanup
+                cleanup_github: Also delete GitHub repository
+                cleanup_argocd: Also delete ArgoCD application
+            """
+            with self.lock:
+                key = f"{namespace}/{pod_name}"
+                self.scheduled_cleanups[key] = {
+                    "cleanup_time": cleanup_time,
+                    "cleanup_github": cleanup_github,
+                    "cleanup_argocd": cleanup_argocd
+                }
+                logger.info(f"Scheduled cleanup for {key} at {cleanup_time}")
         )
     
     def cancel_cleanup(self, pod_name: str, namespace: str):
@@ -159,3 +157,60 @@ class CleanupScheduler:
         
         with self.lock:
             return self.scheduled_cleanups.get(key)
+
+    def _cleanup_loop(self):
+    """Background thread that performs scheduled cleanups"""
+    logger.info("Cleanup scheduler started")
+    
+    # Get GitOps clients (from main.py or pass as parameters)
+    from main import github_client, argocd_client
+    
+    while self.running:
+        try:
+            now = datetime.utcnow()
+            to_cleanup = []
+            
+            with self.lock:
+                for key, data in self.scheduled_cleanups.items():
+                    if now >= data["cleanup_time"]:
+                        to_cleanup.append((key, data))
+            
+            # Perform cleanups
+            for key, data in to_cleanup:
+                namespace, pod_name = key.split("/")
+                
+                try:
+                    # 1. Delete ArgoCD application (if enabled)
+                    if data.get("cleanup_argocd") and argocd_client:
+                        logger.info(f"Deleting ArgoCD application: {pod_name}")
+                        argocd_client.delete_application(pod_name, cascade=True)
+                    
+                    # 2. Delete GitHub repository (if enabled)
+                    if data.get("cleanup_github") and github_client:
+                        repo_name = f"{namespace}-{pod_name}"
+                        logger.info(f"Deleting GitHub repository: {repo_name}")
+                        github_client.delete_repo(repo_name)
+                    
+                    # 3. Direct K8s cleanup (for demo mode or as backup)
+                    logger.info(f"Cleaning up Kubernetes resources: {key}")
+                    self.k8s_client.delete_pod(namespace, pod_name)
+                    
+                    # Remove from schedule
+                    with self.lock:
+                        del self.scheduled_cleanups[key]
+                    
+                    logger.info(f"Cleanup completed for {key}")
+                    
+                except Exception as e:
+                    logger.error(f"Failed to cleanup {key}: {e}", exc_info=True)
+                    # Remove from schedule anyway to avoid infinite retries
+                    with self.lock:
+                        if key in self.scheduled_cleanups:
+                            del self.scheduled_cleanups[key]
+            
+            # Sleep before next check
+            time.sleep(10)
+            
+        except Exception as e:
+            logger.error(f"Error in cleanup loop: {e}", exc_info=True)
+            time.sleep(10)
