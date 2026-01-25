@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Dict, List
 from github_client import GitHubClient
 from argocd_client import ArgoCDClient
+from k8s_client import KubernetesClient
 
 import logging
 
