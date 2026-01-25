@@ -88,10 +88,11 @@ metadata:
   labels:
     app: paved-roads-frontend
 spec:
-  type: ClusterIP
+  type: NodePort
   ports:
   - port: 80
     targetPort: 80
+    nodeport: 30087
     protocol: TCP
     name: http
   selector:
