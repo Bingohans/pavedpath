@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 from github_client import GitHubClient
 from argocd_client import ArgoCDClient
+from datetime import datetime, timedelta
 import os
 import logging
 
@@ -17,6 +18,7 @@ from auth import get_current_user, create_demo_token
 from k8s_client import KubernetesClient
 from cleanup import CleanupScheduler
 
+JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 GITHUB_ORG = os.getenv("GITHUB_ORG")
 ARGOCD_URL = os.getenv("ARGOCD_URL", "https://argocd-server.argocd.svc.cluster.local")
@@ -24,6 +26,9 @@ ARGOCD_TOKEN = os.getenv("ARGOCD_TOKEN")
 
 github_client = None
 argocd_client = None
+
+AUTO_CLEANUP_MINUTES = int(os.getenv("AUTO_CLEANUP_MINUTES", "5"))  # ← ADD THIS!
+RATE_LIMIT_PER_HOUR = int(os.getenv("RATE_LIMIT_PER_HOUR", "3"))
 
 if GITHUB_TOKEN:
     from github_client import GitHubClient
