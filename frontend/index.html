@@ -1444,6 +1444,7 @@
                 has_database: hasDatabase
             });
             
+            console.log('Full API response:', response);
             // Store in sessionStorage (not URL!)
             sessionStorage.setItem('currentDeployment', JSON.stringify({
                 pod_name: response.pod_name,
@@ -1456,6 +1457,7 @@
                 has_storage: hasStorage,
                 has_database: hasDatabase
             }));
+            console.log('Stored in sessionStorage:', sessionStorage.getItem('currentDeployment'));
             
             // Clean URL redirect!
             window.location.href = '/deploying';

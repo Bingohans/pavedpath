@@ -169,10 +169,7 @@ class GitHubClient:
 
         # Node - keep alive with simple server
         elif "node" in image_lower:
-            return ["/bin/sh"], [
-                "-c",
-                "echo 'Node container started' && npx http-server -p 8080",
-            ]
+            return ["/bin/sh"], ["-c", "mkdir -p /tmp/.npm && export NPM_CONFIG_CACHE=/tmp/.npm && echo 'Node container started' && npx http-server -p 8080"]
 
         # Golang - keep alive
         elif "golang" in image_lower or "go" in image_lower:
