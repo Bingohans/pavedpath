@@ -169,6 +169,44 @@ class GitHubClient:
                 "cpu_request_m": 100,
                 "cpu_limit_m": 500
             }
+        command, args = self._get_image_command(docker_image)
+
+        def _get_image_command(self, docker_image: str) -> tuple:
+            """
+            Get appropriate command and args for Docker image
+    
+            Returns:
+                tuple: (command, args) for the container
+            """
+            image_lower = docker_image.lower()
+    
+            # Nginx - runs automatically
+            if "nginx" in image_lower:
+                return None, None  # Nginx starts automatically
+    
+            # Python - keep alive with sleep
+            elif "python" in image_lower:
+                return ["/bin/sh"], ["-c", "echo 'Python container started' && python3 -m http.server 8080"]
+    
+            # Node - keep alive with simple server
+            elif "node" in image_lower:
+                return ["/bin/sh"], ["-c", "echo 'Node container started' && npx http-server -p 8080"]
+    
+            # Golang - keep alive
+            elif "golang" in image_lower or "go" in image_lower:
+                return ["/bin/sh"], ["-c", "echo 'Go container started' && sleep infinity"]
+    
+           # Java/OpenJDK - keep alive
+           elif "openjdk" in image_lower or "java" in image_lower:
+               return ["/bin/sh"], ["-c", "echo 'Java container started' && sleep infinity"]
+    
+           # Redis - runs automatically
+           elif "redis" in image_lower:
+               return None, None  # Redis starts automatically
+    
+           # Default - keep alive
+           else:
+               return ["/bin/sh"], ["-c", "echo 'Container started' && sleep infinity"]
 
 
         # 1. Namespace
@@ -210,7 +248,71 @@ metadata:
         )
         volumes_str = "\n".join(volumes) if volumes else "      # No volumes"
 
-        manifests["deployment.yaml"] = f"""---
+
+container_spec = f"""      - name: app
+        image: {docker_image}
+"""
+
+# Add command if needed
+if command:
+    container_spec += f"""        command: {command}
+"""
+
+if args:
+    container_spec += f"""        args: {args}
+"""
+
+container_spec += f"""        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        
+        resources:
+          requests:
+            memory: "{resources['memory_request_mb']}Mi"
+            cpu: "{resources['cpu_request_m']}m"
+          limits:
+            memory: "{resources['memory_limit_mb']}Mi"
+            cpu: "{resources['cpu_limit_m']}m"
+        
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+{volume_mounts_str}
+"""
+
+# BUILD volumes string (eksisterende kode)
+volume_mounts_str = ""
+volumes_str = ""
+
+if has_storage:
+    volume_mounts_str += f"""        - name: data
+          mountPath: /data
+"""
+    volumes_str += f"""      - name: data
+        persistentVolumeClaim:
+          claimName: {pod_name}-data
+"""
+
+if has_database:
+    volume_mounts_str += f"""        - name: db-secret
+          mountPath: /etc/secrets
+          readOnly: true
+"""
+    volumes_str += f"""      - name: db-secret
+        secret:
+          secretName: {pod_name}-db-credentials
+"""
+
+# BUILD deployment manifest
+manifests["deployment.yaml"] = f"""---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -237,40 +339,14 @@ spec:
           type: RuntimeDefault
       
       containers:
-      - name: app
-        image: {docker_image}
-        imagePullPolicy: Always
-        
-        ports:
-        - containerPort: 8080
-          name: http
-          protocol: TCP
-        
-        resources:
-          requests:
-            memory: "{resources["memory_request_mb"]}Mi"
-            cpu: "{resources["cpu_request_m"]}m"
-          limits:
-            memory: "{resources["memory_limit_mb"]}Mi"
-            cpu: "{resources["cpu_limit_m"]}m"
-        
-        securityContext:
-          allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: true
-          capabilities:
-            drop:
-            - ALL
-        
-        volumeMounts:
-        - name: tmp
-          mountPath: /tmp
-{volume_mounts_str}
+{container_spec}
       
       volumes:
       - name: tmp
         emptyDir: {{}}
 {volumes_str}
 """
+
 
         # 3. Service
         manifests["service.yaml"] = f"""---
