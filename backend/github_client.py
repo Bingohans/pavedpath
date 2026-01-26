@@ -311,8 +311,8 @@ if has_database:
           secretName: {pod_name}-db-credentials
 """
 
-        # BUILD deployment manifest
-        manifests["deployment.yaml"] = f"""---
+# BUILD deployment manifest
+manifests["deployment.yaml"] = f"""---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
