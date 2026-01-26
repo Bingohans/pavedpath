@@ -162,19 +162,16 @@ async def deploy_pod(
 
             # Schedule cleanup
             cleanup_time = datetime.utcnow() + timedelta(minutes=AUTO_CLEANUP_MINUTES)
-            cleanup_scheduler.schedule_cleanup(
-                validated_data["namespace"], validated_data["pod_name"], cleanup_time
-            )
 
             return DeploymentResponse(
                 success=True,
-                message=f"Pod {validated_data['pod_name']} deployed successfully (demo mode)",
+                message=f"Deployment initiated via GitOps for {validated_data['pod_name']}",
                 pod_name=validated_data["pod_name"],
                 namespace=validated_data["namespace"],
-                status="deploying",
+                status="syncing",
                 cleanup_at=cleanup_time,
-                repository_url=f"https://github.com/demo/{validated_data['namespace']}-{validated_data['pod_name']}",
-                argocd_url=f"{ARGOCD_URL}/applications/{validated_data['pod_name']}",
+                repository_url=repo_url,
+                argocd_url=argocd_app_url
             )
 
         # 3. GitOps Mode: Create GitHub repository

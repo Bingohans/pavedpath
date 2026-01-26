@@ -276,10 +276,13 @@ class GitHubClient:
           capabilities:
             drop:
             - ALL
-        
         volumeMounts:
         - name: tmp
           mountPath: /tmp
+        - name: var-cache
+          mountPath: /var/cache
+        - name: var-run
+          mountPath: /var/run
 {volume_mounts_str}"""
 
         # 1. Namespace
@@ -325,6 +328,10 @@ spec:
       
       volumes:
       - name: tmp
+        emptyDir: {{}}
+      - name: var-cache
+        emptyDir: {{}}
+      - name: var-run
         emptyDir: {{}}
 {volumes_str}"""
 
