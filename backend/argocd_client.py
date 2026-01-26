@@ -105,7 +105,7 @@ class ArgoCDClient:
                 f"{self.url}/api/v1/applications",
                 headers=self.headers,
                 json=app_spec,
-                timeout=10
+                timeout=10,
                 verify=False
             )
             
