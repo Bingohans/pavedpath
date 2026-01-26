@@ -92,7 +92,7 @@ class GitHubClient:
             docker_image=docker_image,
             has_storage=has_storage,
             has_database=has_database,
-            resources=resources
+            resources=resources,
             storage_gb=10
         )
         
