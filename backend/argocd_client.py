@@ -106,6 +106,7 @@ class ArgoCDClient:
                 headers=self.headers,
                 json=app_spec,
                 timeout=10
+                verify=False
             )
             
             if response.status_code in [200, 201]:
