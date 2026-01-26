@@ -40,18 +40,18 @@ class GitHubClient:
         docker_image: str,
         has_storage: bool,
         has_database: bool,
-        resources: Optional[Dict] = None
+        resources: Optional[Dict] = None,
     ) -> str:
         """
         Create GitHub repository with Kubernetes manifests
-        
+
         Returns:
             str: Repository HTML URL
         """
         repo_name = f"{namespace}-{pod_name}"
-        
+
         logger.info(f"Creating GitHub repo: {repo_name}")
-        
+
         try:
             # Create repository
             if self.org_name:
@@ -59,32 +59,34 @@ class GitHubClient:
                     name=repo_name,
                     description=f"Kubernetes deployment for {pod_name} in {namespace}",
                     private=False,
-                    auto_init=True
+                    auto_init=True,
                 )
             else:
                 repo = self.user.create_repo(
                     name=repo_name,
                     description=f"Kubernetes deployment for {pod_name} in {namespace}",
                     private=False,
-                    auto_init=True
+                    auto_init=True,
                 )
-            
+
             logger.info(f"Repository created: {repo.html_url}")
-            
+
         except GithubException as e:
             if e.status == 422 and "already exists" in str(e):
-                logger.warning(f"Repository {repo_name} already exists, using existing repo")
-                
+                logger.warning(
+                    f"Repository {repo_name} already exists, using existing repo"
+                )
+
                 if self.org_name:
                     repo = self.org.get_repo(repo_name)
                 else:
                     repo = self.user.get_repo(repo_name)
-                
+
                 logger.info(f"Using existing repository: {repo.html_url}")
             else:
                 logger.error(f"Failed to create repository: {e}")
                 raise
-        
+
         # Generate manifests
         manifests = self._generate_manifests(
             pod_name=pod_name,
@@ -93,9 +95,9 @@ class GitHubClient:
             has_storage=has_storage,
             has_database=has_database,
             resources=resources,
-            storage_gb=10
+            storage_gb=10,
         )
-        
+
         # Push manifests
         for filename, content in manifests.items():
             try:
@@ -106,7 +108,7 @@ class GitHubClient:
                         message=f"Update {filename}",
                         content=content,
                         sha=existing_file.sha,
-                        branch="main"
+                        branch="main",
                     )
                     logger.info(f"Updated file: k8s/{filename}")
                 except GithubException:
@@ -114,13 +116,13 @@ class GitHubClient:
                         path=f"k8s/{filename}",
                         message=f"Add {filename}",
                         content=content,
-                        branch="main"
+                        branch="main",
                     )
                     logger.info(f"Created file: k8s/{filename}")
-                    
+
             except GithubException as e:
                 logger.error(f"Failed to create/update {filename}: {e}")
-        
+
         # Create README
         try:
             readme_content = self._generate_readme(pod_name, namespace, docker_image)
@@ -131,19 +133,65 @@ class GitHubClient:
                     message="Update README",
                     content=readme_content,
                     sha=existing_readme.sha,
-                    branch="main"
+                    branch="main",
                 )
             except GithubException:
                 repo.create_file(
                     path="README.md",
                     message="Add README",
                     content=readme_content,
-                    branch="main"
+                    branch="main",
                 )
         except GithubException as e:
             logger.error(f"Failed to create README: {e}")
-        
+
         return repo.html_url
+
+    def _get_image_command(self, docker_image: str) -> tuple:
+        """
+        Get appropriate command and args for Docker image
+
+        Returns:
+            tuple: (command, args) for the container
+        """
+        image_lower = docker_image.lower()
+
+        # Nginx - runs automatically
+        if "nginx" in image_lower:
+            return None, None
+
+        # Python - keep alive with http server
+        elif "python" in image_lower:
+            return ["/bin/sh"], [
+                "-c",
+                "echo 'Python container started' && python3 -m http.server 8080",
+            ]
+
+        # Node - keep alive with simple server
+        elif "node" in image_lower:
+            return ["/bin/sh"], [
+                "-c",
+                "echo 'Node container started' && npx http-server -p 8080",
+            ]
+
+        # Golang - keep alive
+        elif "golang" in image_lower or "go" in image_lower:
+            return ["/bin/sh"], ["-c", "echo 'Go container started' && sleep infinity"]
+
+        # Java/OpenJDK - keep alive
+        elif "openjdk" in image_lower or "java" in image_lower:
+            return ["/bin/sh"], [
+                "-c",
+                "echo 'Java container started' && sleep infinity",
+            ]
+
+        # Redis - runs automatically
+        elif "redis" in image_lower:
+            return None, None
+
+        # Default - keep alive
+        else:
+            return ["/bin/sh"], ["-c", "echo 'Container started' && sleep infinity"]
 
     def _generate_manifests(
         self,
@@ -153,7 +201,7 @@ class GitHubClient:
         has_storage: bool,
         has_database: bool,
         resources: Optional[Dict] = None,
-        storage_gb: int = 10
+        storage_gb: int = 10,
     ) -> Dict[str, str]:
         """Generate Kubernetes manifest files"""
 
@@ -167,47 +215,72 @@ class GitHubClient:
                 "memory_request_mb": 256,
                 "memory_limit_mb": 512,
                 "cpu_request_m": 100,
-                "cpu_limit_m": 500
+                "cpu_limit_m": 500,
             }
+
+        # Get command for image
         command, args = self._get_image_command(docker_image)
 
-        def _get_image_command(self, docker_image: str) -> tuple:
-            """
-            Get appropriate command and args for Docker image
-    
-            Returns:
-                tuple: (command, args) for the container
-            """
-            image_lower = docker_image.lower()
-    
-            # Nginx - runs automatically
-            if "nginx" in image_lower:
-                return None, None  # Nginx starts automatically
-    
-            # Python - keep alive with sleep
-            elif "python" in image_lower:
-                return ["/bin/sh"], ["-c", "echo 'Python container started' && python3 -m http.server 8080"]
-    
-            # Node - keep alive with simple server
-            elif "node" in image_lower:
-                return ["/bin/sh"], ["-c", "echo 'Node container started' && npx http-server -p 8080"]
-    
-            # Golang - keep alive
-            elif "golang" in image_lower or "go" in image_lower:
-                return ["/bin/sh"], ["-c", "echo 'Go container started' && sleep infinity"]
-    
-            # Java/OpenJDK - keep alive
-            elif "openjdk" in image_lower or "java" in image_lower:
-                return ["/bin/sh"], ["-c", "echo 'Java container started' && sleep infinity"]
-    
-            # Redis - runs automatically
-            elif "redis" in image_lower:
-                return None, None  # Redis starts automatically
-    
-            # Default - keep alive
-            else:
-                return ["/bin/sh"], ["-c", "echo 'Container started' && sleep infinity"]
+        # Build volume strings FIRST
+        volume_mounts_str = ""
+        volumes_str = ""
 
+        if has_storage:
+            volume_mounts_str += """        - name: data
+          mountPath: /data
+"""
+            volumes_str += f"""      - name: data
+        persistentVolumeClaim:
+          claimName: {pod_name}-data
+"""
+
+        if has_database:
+            volume_mounts_str += """        - name: db-secret
+          mountPath: /etc/secrets
+          readOnly: true
+"""
+            volumes_str += f"""      - name: db-secret
+        secret:
+          secretName: {pod_name}-db-credentials
+"""
+
+        # Build container spec
+        container_spec = f"""      - name: app
+        image: {docker_image}
+"""
+
+        if command:
+            container_spec += f"""        command: {command}
+"""
+
+        if args:
+            container_spec += f"""        args: {args}
+"""
+
+        container_spec += f"""        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        
+        resources:
+          requests:
+            memory: "{resources["memory_request_mb"]}Mi"
+            cpu: "{resources["cpu_request_m"]}m"
+          limits:
+            memory: "{resources["memory_limit_mb"]}Mi"
+            cpu: "{resources["cpu_limit_m"]}m"
+        
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+{volume_mounts_str}"""
 
         # 1. Namespace
         manifests["namespace.yaml"] = f"""---
@@ -221,98 +294,7 @@ metadata:
 """
 
         # 2. Deployment
-        volume_mounts = []
-        volumes = []
-
-        if has_storage:
-            volume_mounts.append("""        - name: data
-          mountPath: /data""")
-            volumes.append(
-                """      - name: data
-        persistentVolumeClaim:
-          claimName: {}-data""".format(pod_name)
-            )
-
-        if has_database:
-            volume_mounts.append("""        - name: db-secret
-          mountPath: /etc/secrets
-          readOnly: true""")
-            volumes.append(
-                """      - name: db-secret
-        secret:
-          secretName: {}-db-credentials""".format(pod_name)
-            )
-
-        volume_mounts_str = (
-            "\n".join(volume_mounts) if volume_mounts else "        # No volumes"
-        )
-        volumes_str = "\n".join(volumes) if volumes else "      # No volumes"
-
-
-container_spec = f"""      - name: app
-        image: {docker_image}
-"""
-
-# Add command if needed
-if command:
-    container_spec += f"""        command: {command}
-"""
-
-if args:
-    container_spec += f"""        args: {args}
-"""
-
-container_spec += f"""        ports:
-        - containerPort: 8080
-          name: http
-          protocol: TCP
-        
-        resources:
-          requests:
-            memory: "{resources['memory_request_mb']}Mi"
-            cpu: "{resources['cpu_request_m']}m"
-          limits:
-            memory: "{resources['memory_limit_mb']}Mi"
-            cpu: "{resources['cpu_limit_m']}m"
-        
-        securityContext:
-          allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: true
-          capabilities:
-            drop:
-            - ALL
-        
-        volumeMounts:
-        - name: tmp
-          mountPath: /tmp
-{volume_mounts_str}
-"""
-
-# BUILD volumes string (eksisterende kode)
-volume_mounts_str = ""
-volumes_str = ""
-
-if has_storage:
-    volume_mounts_str += f"""        - name: data
-          mountPath: /data
-"""
-    volumes_str += f"""      - name: data
-        persistentVolumeClaim:
-          claimName: {pod_name}-data
-"""
-
-if has_database:
-    volume_mounts_str += f"""        - name: db-secret
-          mountPath: /etc/secrets
-          readOnly: true
-"""
-    volumes_str += f"""      - name: db-secret
-        secret:
-          secretName: {pod_name}-db-credentials
-"""
-
-# BUILD deployment manifest
-manifests["deployment.yaml"] = f"""---
+        manifests["deployment.yaml"] = f"""---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -344,9 +326,7 @@ spec:
       volumes:
       - name: tmp
         emptyDir: {{}}
-{volumes_str}
-"""
-
+{volumes_str}"""
 
         # 3. Service
         manifests["service.yaml"] = f"""---
@@ -423,7 +403,6 @@ Kubernetes deployment managed by Paved Roads platform.
 - **Created**: {datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")} UTC
 
 ## Structure
-
 ```
 k8s/
 ├── namespace.yaml    - Namespace definition
@@ -438,13 +417,11 @@ k8s/
 This repository is automatically deployed to Kubernetes via ArgoCD.
 
 ### Manual Deployment
-
 ```bash
 kubectl apply -f k8s/
 ```
 
 ### Check Status
-
 ```bash
 kubectl get all -n {namespace}
 kubectl logs -n {namespace} deployment/{pod_name}
@@ -455,7 +432,6 @@ kubectl logs -n {namespace} deployment/{pod_name}
 **Note**: This deployment has auto-cleanup enabled. It will be automatically removed after 5 minutes.
 
 To manually delete:
-
 ```bash
 kubectl delete namespace {namespace}
 ```
