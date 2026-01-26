@@ -196,17 +196,17 @@ class GitHubClient:
             elif "golang" in image_lower or "go" in image_lower:
                 return ["/bin/sh"], ["-c", "echo 'Go container started' && sleep infinity"]
     
-           # Java/OpenJDK - keep alive
-           elif "openjdk" in image_lower or "java" in image_lower:
-               return ["/bin/sh"], ["-c", "echo 'Java container started' && sleep infinity"]
+            # Java/OpenJDK - keep alive
+            elif "openjdk" in image_lower or "java" in image_lower:
+                return ["/bin/sh"], ["-c", "echo 'Java container started' && sleep infinity"]
     
-           # Redis - runs automatically
-           elif "redis" in image_lower:
-               return None, None  # Redis starts automatically
+            # Redis - runs automatically
+            elif "redis" in image_lower:
+                return None, None  # Redis starts automatically
     
-           # Default - keep alive
-           else:
-               return ["/bin/sh"], ["-c", "echo 'Container started' && sleep infinity"]
+            # Default - keep alive
+            else:
+                return ["/bin/sh"], ["-c", "echo 'Container started' && sleep infinity"]
 
 
         # 1. Namespace
