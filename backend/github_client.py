@@ -39,81 +39,115 @@ class GitHubClient:
             logger.info(f"Using GitHub user: {self.user.login}")
 
     def create_deployment_repo(
-        self,
-        pod_name: str,
-        namespace: str,
-        docker_image: str,
-        has_storage: bool,
-        has_database: bool,
-        resources: Optional[Dict] = None,
-    ) -> str:
-        """
-        Create GitHub repository with Kubernetes manifests
-
-        Returns:
-            str: Repository HTML URL
-        """
-        repo_name = f"{namespace}-{pod_name}"
-
-        logger.info(f"Creating GitHub repo: {repo_name}")
-
-        try:
-            # Create repository
-            if self.org_name:
-                repo = self.org.create_repo(
-                    name=repo_name,
-                    description=f"Kubernetes deployment for {pod_name} in {namespace}",
-                    private=False,
-                    auto_init=True,
-                )
-            else:
-                repo = self.user.create_repo(
-                    name=repo_name,
-                    description=f"Kubernetes deployment for {pod_name} in {namespace}",
-                    private=False,
-                    auto_init=True,
-                )
-
-            logger.info(f"Repository created: {repo.html_url}")
-
-            # Generate and push manifests
-            manifests = self._generate_manifests(
-                pod_name=pod_name,
-                namespace=namespace,
-                docker_image=docker_image,
-                has_storage=has_storage,
-                has_database=has_database,
-                resources=resources,
+    self,
+    pod_name: str,
+    namespace: str,
+    docker_image: str,
+    has_storage: bool,
+    has_database: bool,
+    resource_limits: Optional[Dict] = None
+) -> str:
+    """
+    Create GitHub repository with Kubernetes manifests
+    
+    Returns:
+        str: Repository HTML URL
+    """
+    repo_name = f"{namespace}-{pod_name}"
+    
+    logger.info(f"Creating GitHub repo: {repo_name}")
+    
+    try:
+        # Create repository
+        if self.org_name:
+            repo = self.org.create_repo(
+                name=repo_name,
+                description=f"Kubernetes deployment for {pod_name} in {namespace}",
+                private=False,
+                auto_init=True
             )
-
-            # Create k8s directory and files
-            for filename, content in manifests.items():
-                try:
-                    repo.create_file(
-                        path=f"k8s/{filename}",
-                        message=f"Add {filename}",
-                        content=content,
-                        branch="main",
-                    )
-                    logger.info(f"Created file: k8s/{filename}")
-                except GithubException as e:
-                    logger.error(f"Failed to create {filename}: {e}")
-                    # Continue with other files
-
-            # Create README
-            readme_content = self._generate_readme(pod_name, namespace, docker_image)
+        else:
+            repo = self.user.create_repo(
+                name=repo_name,
+                description=f"Kubernetes deployment for {pod_name} in {namespace}",
+                private=False,
+                auto_init=True
+            )
+        
+        logger.info(f"Repository created: {repo.html_url}")
+        
+    except GithubException as e:
+        if e.status == 422 and "already exists" in str(e):
+            logger.warning(f"Repository {repo_name} already exists, using existing repo")
+            
+            if self.org_name:
+                repo = self.org.get_repo(repo_name)
+            else:
+                repo = self.user.get_repo(repo_name)
+            
+            logger.info(f"Using existing repository: {repo.html_url}")
+        else:
+            logger.error(f"Failed to create repository: {e}")
+            raise
+    
+    # Generate manifests
+    manifests = self._generate_manifests(
+        pod_name=pod_name,
+        namespace=namespace,
+        docker_image=docker_image,
+        has_storage=has_storage,
+        has_database=has_database,
+        resource_limits=resource_limits
+    )
+    
+    # Push manifests
+    for filename, content in manifests.items():
+        try:
+            try:
+                existing_file = repo.get_contents(f"k8s/{filename}", ref="main")
+                repo.update_file(
+                    path=f"k8s/{filename}",
+                    message=f"Update {filename}",
+                    content=content,
+                    sha=existing_file.sha,
+                    branch="main"
+                )
+                logger.info(f"Updated file: k8s/{filename}")
+            except GithubException:
+                repo.create_file(
+                    path=f"k8s/{filename}",
+                    message=f"Add {filename}",
+                    content=content,
+                    branch="main"
+                )
+                logger.info(f"Created file: k8s/{filename}")
+                
+        except GithubException as e:
+            logger.error(f"Failed to create/update {filename}: {e}")
+    
+    # Create README
+    try:
+        readme_content = self._generate_readme(pod_name, namespace, docker_image)
+        try:
+            existing_readme = repo.get_contents("README.md", ref="main")
+            repo.update_file(
+                path="README.md",
+                message="Update README",
+                content=readme_content,
+                sha=existing_readme.sha,
+                branch="main"
+            )
+        except GithubException:
             repo.create_file(
                 path="README.md",
                 message="Add README",
                 content=readme_content,
-                branch="main",
+                branch="main"
             )
-
-            return repo.html_url
-
-        except GithubException as e:
-            logger.error(f"Failed to create repository: {e}")
-            raise
+    except GithubException as e:
+        logger.error(f"Failed to create README: {e}")
+    
+    return repo.html_url
 
     def _generate_manifests(
         self,
