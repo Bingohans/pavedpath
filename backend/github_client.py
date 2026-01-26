@@ -152,7 +152,7 @@ class GitHubClient:
         docker_image: str,
         has_storage: bool,
         has_database: bool,
-        resources: Optional[Dict] = None
+        resources: Optional[Dict] = None,
         storage_gb: int = 10
     ) -> Dict[str, str]:
         """Generate Kubernetes manifest files"""
