@@ -40,7 +40,7 @@ class GitHubClient:
         docker_image: str,
         has_storage: bool,
         has_database: bool,
-        resource_limits: Optional[Dict] = None
+        resources: Optional[Dict] = None
     ) -> str:
         """
         Create GitHub repository with Kubernetes manifests
@@ -92,7 +92,7 @@ class GitHubClient:
             docker_image=docker_image,
             has_storage=has_storage,
             has_database=has_database,
-            resource_limits=resource_limits
+            resources=resources
         )
         
         # Push manifests
@@ -151,15 +151,15 @@ class GitHubClient:
         docker_image: str,
         has_storage: bool,
         has_database: bool,
-        resource_limits: Optional[Dict] = None
+        resources: Optional[Dict] = None
     ) -> Dict[str, str]:
         """Generate Kubernetes manifest files"""
 
         manifests = {}
 
         # Default resource limits
-        if resource_limits:
-            resources = resource_limits
+        if resources:
+            resources = resources
         else:
             resources = {
                 "memory_request_mb": 256,
