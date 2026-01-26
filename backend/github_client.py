@@ -93,6 +93,7 @@ class GitHubClient:
             has_storage=has_storage,
             has_database=has_database,
             resources=resources
+            storage_gb=10
         )
         
         # Push manifests
@@ -152,6 +153,7 @@ class GitHubClient:
         has_storage: bool,
         has_database: bool,
         resources: Optional[Dict] = None
+        storage_gb: int = 10
     ) -> Dict[str, str]:
         """Generate Kubernetes manifest files"""
 
@@ -306,7 +308,7 @@ spec:
   storageClassName: rook-ceph-block
   resources:
     requests:
-      storage: {resources["storage"]}
+      storage: {storage_gb}Gi
 """
 
         # 5. Secret (if database requested)
