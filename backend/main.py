@@ -1,6 +1,6 @@
 import logging
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from argocd_client import ArgoCDClient
 from auth import create_demo_token, get_current_user
@@ -34,6 +34,7 @@ argocd_client = None
 
 AUTO_CLEANUP_MINUTES = int(os.getenv("AUTO_CLEANUP_MINUTES", "5"))  # ← ADD THIS!
 RATE_LIMIT_PER_HOUR = int(os.getenv("RATE_LIMIT_PER_HOUR", "3"))
+
 
 if GITHUB_TOKEN:
     from github_client import GitHubClient
@@ -161,7 +162,7 @@ async def deploy_pod(
             result = k8s_client.deploy_pod(validated_data)
 
             # Schedule cleanup
-            cleanup_time = datetime.utcnow() + timedelta(minutes=AUTO_CLEANUP_MINUTES)
+            cleanup_time = datetime.now(timezone.utc) + timedelta(minutes=AUTO_CLEANUP_MINUTES)
 
             return DeploymentResponse(
                 success=True,
@@ -214,7 +215,7 @@ async def deploy_pod(
             )
 
         # 5. Schedule cleanup (for both GitHub and ArgoCD)
-        cleanup_time = datetime.utcnow() + timedelta(minutes=AUTO_CLEANUP_MINUTES)
+        cleanup_time = datetime.now(timezone.utc) + timedelta(minutes=AUTO_CLEANUP_MINUTES)
         cleanup_scheduler.schedule_cleanup(
             validated_data["namespace"],
             validated_data["pod_name"],
