@@ -47,12 +47,12 @@ class GitHubClient:
     has_database: bool,
     resource_limits: Optional[Dict] = None
 ) -> str:
-    """
+    '''
     Create GitHub repository with Kubernetes manifests
     
     Returns:
         str: Repository HTML URL
-    """
+    '''
     repo_name = f"{namespace}-{pod_name}"
     
     logger.info(f"Creating GitHub repo: {repo_name}")
