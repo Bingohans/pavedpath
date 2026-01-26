@@ -1,6 +1,6 @@
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List
 from github_client import GitHubClient
 from argocd_client import ArgoCDClient
@@ -68,7 +68,7 @@ class CleanupScheduler:
         
         while self.running:
             try:
-                now = datetime.utcnow()
+                now = datetime.now(timezone.utc)
                 to_cleanup = []
                 
                 with self.lock:
