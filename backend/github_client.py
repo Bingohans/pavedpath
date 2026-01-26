@@ -293,7 +293,7 @@ metadata:
   name: {namespace}
   labels:
     created-by: paved-roads
-    created-at: "{datetime.utcnow().isoformat()}Z"
+    created-at: "{datetime.utcnow().strftime('%Y%m%d-%H%M%S')}"
 """
 
         # 2. Deployment
