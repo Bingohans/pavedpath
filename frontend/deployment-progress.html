@@ -338,6 +338,15 @@
         width: 16px;
         height: 16px;
       }
+      .pod-age {
+       font-size: 0.8125rem;
+       color: var(--text-muted);
+       padding: 0.25rem 0.5rem;
+       background: white;
+       border-radius: 4px;
+       border: 1px solid var(--border);
+       display: inline-block;
+      }
 
       /* Instructions Panel */
       .instructions-panel {
@@ -623,6 +632,7 @@
               </div>
 
               <!-- Child Resources -->
+              <div class="node-children"></div>
               <div class="child-node">
                 <div class="child-icon">🎯</div>
                 <div class="node-content">
@@ -719,6 +729,7 @@
                           stroke-linecap="round"
                         />
                       </svg>
+                    </div>
                     </div>
                     <span class="node-age">just now</span>
                   </div>
