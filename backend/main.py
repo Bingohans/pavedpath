@@ -303,22 +303,27 @@ async def get_deployment_status(
     """Get Kubernetes pod status"""
     try:
         # Get pod status from K8s
-        pod_status = k8s_client.get_pod_status(namespace, pod_name)
+        pod_status = k8s_client.get_pod_status(pod_name, namespace)
 
-        return {
-            "namespace": namespace,
-            "pod_name": pod_name,
-            "status": pod_status.get("status", "unknown"),
-            "phase": pod_status.get("phase", "unknown"),
-            "ready": pod_status.get("ready", False),
-            "restarts": pod_status.get("restarts", 0),
-        }
+        # Check if pod exists
+        if pod_status is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Pod {pod_name} not found in namespace {namespace}",
+            )
 
+        # Return the complete pod_status dict (already has all fields!)
+        return pod_status
+
+    except HTTPException:
+        # Re-raise HTTPException as-is
+        raise
     except Exception as e:
-        logger.error(f"Failed to get pod status: {e}")
+        # Log unexpected errors
+        logger.error(f"Failed to get pod status: {e}", exc_info=True)
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Pod {pod_name} not found in namespace {namespace}",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error",
         )
 
 
