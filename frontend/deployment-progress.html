@@ -1048,49 +1048,35 @@
         if (status) status.textContent = steps[stepIndex].status;
       }
       function updateResourceAges() {
-        console.log("updateResourceAges called");
-        console.log("deploymentData:", deploymentData);
-        console.log("cleanup_at:", deploymentData.cleanup_at);
-
         const deployTime = new Date(deploymentData.cleanup_at);
-        console.log("Parsed deployTime:", deployTime);
-
         // Subtract 5 minutes (since cleanup_at is 5 min in future)
         const actualDeployTime = new Date(deployTime.getTime() - 5 * 60 * 1000);
-        console.log("actualDeployTime:", actualDeployTime);
 
         function updateAges() {
           const now = new Date();
           const diffMs = now - actualDeployTime;
 
-          console.log("Now:", now);
-          console.log("Diff (ms):", diffMs);
-          console.log("Diff (minutes):", Math.floor(diffMs / 60000));
-
-          const seconds = Math.floor(diffMs / 1000);
-          const minutes = Math.floor(seconds / 60);
+          const totalSeconds = Math.floor(diffMs / 1000);
+          const minutes = Math.floor(totalSeconds / 60);
+          const seconds = totalSeconds % 60;
           const hours = Math.floor(minutes / 60);
 
           let ageText;
           if (hours > 0) {
-            ageText = `${hours} hour${hours > 1 ? "s" : ""}`;
+            const remainMin = minutes % 60;
+            ageText = `${hours}h ${remainMin}m`;
           } else if (minutes > 0) {
-            ageText = `${minutes} min`;
+            ageText = `${minutes}m ${seconds}s`;
           } else {
-            ageText = "just now";
+            ageText = `${seconds}s`;
           }
 
-          console.log("Age text:", ageText);
-
-          // Update all age spans
-          document.querySelectorAll(".node-age").forEach((el) => {
-            if (!el.querySelector(".status-badge")) {
-              el.textContent = ageText;
-            }
+          // Update .node-age and .pod-age spans
+          document.querySelectorAll(".node-age, .pod-age").forEach((el) => {
+            el.textContent = ageText;
           });
 
-          // Update every 10 seconds for testing
-          setTimeout(updateAges, 10000);
+          setTimeout(updateAges, 1000);
         }
 
         updateAges();
