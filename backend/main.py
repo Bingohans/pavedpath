@@ -2,19 +2,18 @@ import logging
 import os
 from datetime import datetime, timedelta, timezone
 
-from fastapi import Depends, FastAPI, HTTPException, Request, status
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.errors import RateLimitExceeded
-from slowapi.util import get_remote_address
-
 from argocd_client import ArgoCDClient
 from auth import create_demo_token, get_current_user
 from cleanup import CleanupScheduler
+from fastapi import Depends, FastAPI, HTTPException, Request, status
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from github_client import GitHubClient
 from k8s_client import KubernetesClient
 from models import DeploymentRequest, DeploymentResponse, User
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 from validator import DeploymentValidator
 
 # Configure logging
@@ -253,33 +252,6 @@ async def deploy_pod(
         )
 
 
-@app.get("/api/deployment/{namespace}/{pod_name}/argocd-status")
-async def get_argocd_status(
-    namespace: str, pod_name: str, current_user: User = Depends(get_current_user)
-):
-    """Get ArgoCD sync and health status"""
-
-    if not argocd_client:
-        return {
-            "sync_status": "unknown",
-            "health_status": "unknown",
-            "message": "ArgoCD not configured",
-        }
-
-    try:
-        sync_status = argocd_client.get_application_status(pod_name)
-        health_status = argocd_client.get_application_health(pod_name)
-
-        return {
-            "sync_status": sync_status or "not_found",
-            "health_status": health_status or "not_found",
-            "argocd_url": f"{ARGOCD_URL}/applications/{pod_name}",
-        }
-    except Exception as e:
-        logger.error(f"Failed to get ArgoCD status: {e}")
-        return {"sync_status": "error", "health_status": "error", "message": str(e)}
-
-
 @app.delete("/api/deployment/{namespace}/{pod_name}")
 async def delete_deployment(
     namespace: str, pod_name: str, current_user: User = Depends(get_current_user)
@@ -321,6 +293,32 @@ async def delete_deployment(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete deployment",
+        )
+
+
+@app.get("/api/deployment/{namespace}/{pod_name}")
+async def get_deployment_status(
+    namespace: str, pod_name: str, current_user: User = Depends(get_current_user)
+):
+    """Get Kubernetes pod status"""
+    try:
+        # Get pod status from K8s
+        pod_status = k8s_client.get_pod_status(namespace, pod_name)
+
+        return {
+            "namespace": namespace,
+            "pod_name": pod_name,
+            "status": pod_status.get("status", "unknown"),
+            "phase": pod_status.get("phase", "unknown"),
+            "ready": pod_status.get("ready", False),
+            "restarts": pod_status.get("restarts", 0),
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to get pod status: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Pod {pod_name} not found in namespace {namespace}",
         )
 
 
