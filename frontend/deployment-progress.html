@@ -161,6 +161,17 @@
         }
       }
 
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
       .step-text {
         flex: 1;
         font-size: 0.9375rem;
@@ -1087,6 +1098,23 @@
         updateAges();
       }
 
+      function completeStep(stepIndex) {
+        const stepElements = document.querySelectorAll(".progress-step");
+        const step = stepElements[stepIndex];
+        if (!step) return;
+
+        step.classList.remove("active");
+        step.classList.add("completed");
+        const icon = step.querySelector(".step-icon");
+        if (icon) {
+          icon.classList.remove("active", "pending");
+          icon.classList.add("completed");
+          icon.textContent = "✓";
+        }
+        const status = step.querySelector(".step-status");
+        if (status) status.textContent = "Completed";
+      }
+
       function runDeployment() {
         let totalDelay = 0;
 
@@ -1096,17 +1124,29 @@
 
             if (index === steps.length - 1) {
               setTimeout(() => {
-                updateStep(index + 1);
+                completeStep(index);
 
                 setTimeout(() => {
                   const progressSection =
                     document.getElementById("progressSection");
                   const mainContent = document.getElementById("mainContent");
-                  if (progressSection) progressSection.classList.add("hidden");
-                  if (mainContent) mainContent.style.display = "grid";
-                  startCountdown();
-                  pollDeploymentStatus();
-                  updateResourceAges();
+
+                  if (progressSection) {
+                    progressSection.style.transition = "opacity 0.3s ease-out";
+                    progressSection.style.opacity = "0";
+                  }
+
+                  setTimeout(() => {
+                    if (progressSection)
+                      progressSection.classList.add("hidden");
+                    if (mainContent) {
+                      mainContent.style.display = "grid";
+                      mainContent.style.animation = "fadeIn 0.5s ease-in-out";
+                    }
+                    startCountdown();
+                    pollDeploymentStatus();
+                    updateResourceAges();
+                  }, 300);
                 }, 500);
               }, step.duration);
             }
