@@ -1,7 +1,7 @@
 import logging
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict
 
 from k8s_client import KubernetesClient
@@ -45,6 +45,10 @@ class CleanupScheduler:
         cleanup_argocd: bool = False,
     ):
         """Schedule cleanup with optional GitOps cleanup"""
+
+        if cleanup_time.tzinfo is None:
+            cleanup_time = cleanup_time.replace(tzinfo=timezone.utc)
+
         with self.lock:
             key = f"{namespace}/{pod_name}"
             self.scheduled_cleanups[key] = {
@@ -68,7 +72,7 @@ class CleanupScheduler:
 
         while self.running:
             try:
-                now = datetime.utcnow()
+                now = datetime.now(timezone.utc)
                 to_cleanup = []
 
                 with self.lock:
