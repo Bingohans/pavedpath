@@ -2,18 +2,19 @@ import logging
 import os
 from datetime import datetime, timedelta, timezone
 
-from argocd_client import ArgoCDClient
-from auth import create_demo_token, get_current_user
-from cleanup import CleanupScheduler
 from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from github_client import GitHubClient
-from k8s_client import KubernetesClient
-from models import DeploymentRequest, DeploymentResponse, User
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
+
+from argocd_client import ArgoCDClient
+from auth import create_demo_token, get_current_user
+from cleanup import CleanupScheduler
+from github_client import GitHubClient
+from k8s_client import KubernetesClient
+from models import DeploymentRequest, DeploymentResponse, User
 from validator import DeploymentValidator
 
 # Configure logging
@@ -162,7 +163,9 @@ async def deploy_pod(
             result = k8s_client.deploy_pod(validated_data)
 
             # Schedule cleanup
-            cleanup_time = datetime.now(timezone.utc) + timedelta(minutes=AUTO_CLEANUP_MINUTES)
+            cleanup_time = datetime.now(timezone.utc) + timedelta(
+                minutes=AUTO_CLEANUP_MINUTES
+            )
 
             return DeploymentResponse(
                 success=True,
@@ -172,7 +175,7 @@ async def deploy_pod(
                 status="syncing",
                 cleanup_at=cleanup_time,
                 repository_url=repo_url,
-                argocd_url=argocd_app_url
+                argocd_url=argocd_app_url,
             )
 
         # 3. GitOps Mode: Create GitHub repository
@@ -215,7 +218,9 @@ async def deploy_pod(
             )
 
         # 5. Schedule cleanup (for both GitHub and ArgoCD)
-        cleanup_time = datetime.now(timezone.utc) + timedelta(minutes=AUTO_CLEANUP_MINUTES)
+        cleanup_time = datetime.now(timezone.utc) + timedelta(
+            minutes=AUTO_CLEANUP_MINUTES
+        )
         cleanup_scheduler.schedule_cleanup(
             validated_data["namespace"],
             validated_data["pod_name"],
